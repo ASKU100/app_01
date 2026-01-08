@@ -1,4 +1,4 @@
-// st-integration.js - 催眠APP与SillyTavern集成脚本
+// st-integration.js - 催眠APP与SillyTavern集成脚本（改进版）
 (function() {
     'use strict';
     
@@ -9,11 +9,12 @@
     // ================================
     const CONFIG = {
         appName: '催眠APP扩展',
-        version: '1.0.0',
+        version: '1.1.0', // 版本更新
         debug: true,
         timeout: 10000, // 10秒超时
         retryDelay: 500, // 重试延迟
-        maxRetries: 10   // 最大重试次数
+        maxRetries: 30,   // 最大重试次数（增加到30次，15秒超时）
+        smsStorageKey: 'hypnosis_sms_storage_v2'
     };
     
     // ================================
@@ -235,7 +236,7 @@
         },
         
         // ================================
-        // 角色管理
+        // 角色管理 - 改进版
         // ================================
         
         // 获取角色列表（从[initvar]变量）
@@ -265,48 +266,159 @@
             }
         },
         
-        // 从酒馆助手变量获取角色
+        // 从酒馆助手变量获取角色 - 修复版
         _getCharactersFromTavernHelper: async function() {
             try {
                 if (!window.parent || !window.parent.TavernHelper) {
                     throw new Error('酒馆助手未找到');
                 }
-                
+
                 const TH = window.parent.TavernHelper;
                 
                 // 等待酒馆助手初始化
                 await this._waitForTavernHelper();
                 
-                // 获取聊天变量
-                const variables = TH.getVariables({ type: 'chat' });
-                if (!variables || !variables.stat_data || !variables.stat_data.角色) {
-                    throw new Error('未找到角色变量');
+                console.log('🔍 开始从酒馆助手变量搜索角色数据...');
+                
+                // 方法1：从最新的消息楼层变量获取（从initvar初始化而来）
+                try {
+                    console.log('正在检查消息楼层变量...');
+                    // 获取最新消息楼层的变量
+                    const messageVars = TH.getVariables({ 
+                        type: 'message', 
+                        message_id: 'latest' 
+                    });
+                    
+                    console.log('消息楼层变量结构:', messageVars);
+                    
+                    if (messageVars && messageVars.stat_data && messageVars.stat_data.角色) {
+                        const roleData = messageVars.stat_data.角色;
+                        const characters = this._convertRoleDataToCharacters(roleData, 'message');
+                        console.log(`✅ 从消息楼层变量加载了 ${characters.length} 个角色`);
+                        return characters;
+                    } else {
+                        console.log('消息楼层变量中没有找到角色数据');
+                    }
+                } catch (error) {
+                    console.warn('从消息楼层变量获取角色失败:', error.message);
                 }
                 
-                const roleData = variables.stat_data.角色;
-                const characters = [];
+                // 方法2：从聊天变量获取
+                try {
+                    console.log('正在检查聊天变量...');
+                    const chatVars = TH.getVariables({ type: 'chat' });
+                    console.log('聊天变量结构:', chatVars);
+                    
+                    if (chatVars && chatVars.stat_data && chatVars.stat_data.角色) {
+                        const roleData = chatVars.stat_data.角色;
+                        const characters = this._convertRoleDataToCharacters(roleData, 'chat');
+                        console.log(`✅ 从聊天变量加载了 ${characters.length} 个角色`);
+                        return characters;
+                    } else {
+                        console.log('聊天变量中没有找到角色数据');
+                    }
+                } catch (error) {
+                    console.warn('从聊天变量获取角色失败:', error.message);
+                }
                 
-                // 转换格式
-                Object.entries(roleData).forEach(([name, data]) => {
-                    characters.push({
-                        name: name,
-                        phone: this._generatePhoneNumber(name),
-                        status: this._generateStatus(name),
-                        avatar: this._generateAvatar(name),
-                        metadata: {
-                            好感度: data.好感度 || 0,
-                            警戒度: data.警戒度 || 0,
-                            服从度: data.服从度 || 0
-                        }
+                // 方法3：从全局变量获取
+                try {
+                    console.log('正在检查全局变量...');
+                    const globalVars = TH.getVariables({ type: 'global' });
+                    console.log('全局变量结构:', globalVars);
+                    
+                    if (globalVars && globalVars.stat_data && globalVars.stat_data.角色) {
+                        const roleData = globalVars.stat_data.角色;
+                        const characters = this._convertRoleDataToCharacters(roleData, 'global');
+                        console.log(`✅ 从全局变量加载了 ${characters.length} 个角色`);
+                        return characters;
+                    } else {
+                        console.log('全局变量中没有找到角色数据');
+                    }
+                } catch (error) {
+                    console.warn('从全局变量获取角色失败:', error.message);
+                }
+                
+                // 方法4：尝试从聊天消息中解析
+                try {
+                    console.log('正在从聊天消息中解析角色...');
+                    const messages = TH.getChatMessages('0-{{lastMessageId}}', { 
+                        include_swipes: false,
+                        hide_state: 'unhidden'
                     });
-                });
+                    
+                    if (messages && messages.length > 0) {
+                        // 从消息中提取角色名
+                        const characterNames = new Set();
+                        messages.forEach(msg => {
+                            if (msg.name && msg.name !== 'System' && msg.name !== 'You') {
+                                characterNames.add(msg.name);
+                            }
+                        });
+                        
+                        if (characterNames.size > 0) {
+                            const characters = Array.from(characterNames).map(name => ({
+                                name: name,
+                                phone: this._generatePhoneNumber(name),
+                                status: this._generateStatus(name),
+                                avatar: this._generateAvatar(name),
+                                metadata: {}
+                            }));
+                            console.log(`✅ 从聊天消息中解析了 ${characters.length} 个角色`);
+                            return characters;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('从聊天消息解析角色失败:', error.message);
+                }
                 
-                return characters;
+                throw new Error('在所有变量位置都未找到角色数据');
                 
             } catch (error) {
                 console.warn('从酒馆助手获取角色失败:', error.message);
                 return null;
             }
+        },
+        
+        // 转换角色数据为统一格式
+        _convertRoleDataToCharacters: function(roleData, source) {
+            const characters = [];
+            
+            if (!roleData || typeof roleData !== 'object') {
+                return characters;
+            }
+            
+            Object.entries(roleData).forEach(([name, data]) => {
+                if (typeof data === 'object' && data !== null) {
+                    const character = {
+                        name: name,
+                        phone: this._generatePhoneNumber(name),
+                        status: this._generateStatus(name),
+                        avatar: this._generateAvatar(name),
+                        metadata: {}
+                    };
+                    
+                    // 从data中提取可能的属性
+                    const possibleFields = [
+                        '好感度', '警戒度', '服从度', '性欲', '快感值',
+                        '阴蒂敏感度', '小穴敏感度', '菊穴敏感度', 
+                        '尿道敏感度', '乳头敏感度'
+                    ];
+                    
+                    possibleFields.forEach(field => {
+                        if (data[field] !== undefined) {
+                            character.metadata[field] = data[field];
+                        }
+                    });
+                    
+                    // 记录数据来源
+                    character.metadata._source = source;
+                    
+                    characters.push(character);
+                }
+            });
+            
+            return characters;
         },
         
         // 从DOM解析角色
@@ -347,7 +459,7 @@
                 { name: '西园寺爱丽莎', phone: '090-1234-0001', status: 'online', avatar: '👑', metadata: { 好感度: 0, 警戒度: 0 } },
                 { name: '月咏深雪', phone: '090-1234-0002', status: 'online', avatar: '❄️', metadata: { 好感度: 0, 警戒度: 0 } },
                 { name: '犬冢夏美', phone: '090-1234-0003', status: 'busy', avatar: '🐕', metadata: { 好感度: 0, 警戒度: 0 } },
-                { name: '阿宅君', phone: '090-1234-0004', status: 'offline', avatar: '👓', metadata: { 好感度: 0, 警戒度: 0 } }
+                { name: '伊莉雅', phone: '090-1234-0004', status: 'offline', avatar: '👓', metadata: { 好感度: 0, 警戒度: 0 } }
             ];
         },
         
@@ -381,29 +493,235 @@
         },
         
         // ================================
+        // 短信管理器 - 新增功能
+        // ================================
+        
+        SMSManager: {
+            // 存储结构：{ contactName: { messages: [], unreadCount: 0 } }
+            storage: {},
+            
+            // 初始化
+            init: function() {
+                try {
+                    const saved = localStorage.getItem(CONFIG.smsStorageKey);
+                    if (saved) {
+                        this.storage = JSON.parse(saved);
+                        console.log('📱 短信存储已加载:', Object.keys(this.storage).length, '个联系人');
+                    }
+                } catch (error) {
+                    console.warn('加载短信存储失败:', error);
+                    this.storage = {};
+                }
+                
+                // 迁移旧数据
+                this._migrateOldData();
+            },
+            
+            // 迁移旧版本数据
+            _migrateOldData: function() {
+                try {
+                    const oldKey = 'hypnosis_sms_storage';
+                    const oldData = localStorage.getItem(oldKey);
+                    if (oldData && Object.keys(this.storage).length === 0) {
+                        this.storage = JSON.parse(oldData);
+                        localStorage.setItem(CONFIG.smsStorageKey, JSON.stringify(this.storage));
+                        localStorage.removeItem(oldKey);
+                        console.log('📱 已迁移旧版短信数据');
+                    }
+                } catch (error) {
+                    console.warn('迁移旧数据失败:', error);
+                }
+            },
+            
+            // 保存到本地存储
+            save: function() {
+                try {
+                    localStorage.setItem(CONFIG.smsStorageKey, JSON.stringify(this.storage));
+                } catch (error) {
+                    console.warn('保存短信存储失败:', error);
+                }
+            },
+            
+            // 添加消息
+            addMessage: function(contact, message, isFromUser = true) {
+                if (!contact || !message) {
+                    console.warn('无效的消息参数');
+                    return null;
+                }
+                
+                if (!this.storage[contact]) {
+                    this.storage[contact] = {
+                        messages: [],
+                        unreadCount: 0,
+                        lastUpdated: new Date().toISOString()
+                    };
+                }
+                
+                const msgObj = {
+                    id: Date.now() + Math.random().toString(36).substr(2, 9),
+                    text: message,
+                    fromUser: isFromUser,
+                    timestamp: new Date().toISOString(),
+                    read: isFromUser // 用户发送的消息默认为已读
+                };
+                
+                this.storage[contact].messages.push(msgObj);
+                
+                // 如果不是用户发送的消息，增加未读计数
+                if (!isFromUser) {
+                    this.storage[contact].unreadCount++;
+                    console.log(`📱 ${contact} 有新的未读消息，总数: ${this.storage[contact].unreadCount}`);
+                }
+                
+                // 保持消息数量在合理范围内
+                if (this.storage[contact].messages.length > 100) {
+                    this.storage[contact].messages = this.storage[contact].messages.slice(-50);
+                    console.log(`📱 已清理 ${contact} 的历史消息`);
+                }
+                
+                this.storage[contact].lastUpdated = new Date().toISOString();
+                this.save();
+                
+                if (CONFIG.debug) {
+                    console.log(`📝 短信已保存到 ${contact}:`, {
+                        length: message.length,
+                        isFromUser: isFromUser,
+                        unreadCount: this.storage[contact].unreadCount
+                    });
+                }
+                
+                return msgObj;
+            },
+            
+            // 获取未读消息
+            getUnreadMessages: function(contact) {
+                if (!this.storage[contact]) return [];
+                return this.storage[contact].messages.filter(msg => !msg.read && !msg.fromUser);
+            },
+            
+            // 标记为已读
+            markAsRead: function(contact, messageId = null) {
+                if (!this.storage[contact]) return 0;
+                
+                let markedCount = 0;
+                
+                if (messageId) {
+                    // 标记单条消息
+                    const message = this.storage[contact].messages.find(msg => msg.id === messageId);
+                    if (message && !message.read && !message.fromUser) {
+                        message.read = true;
+                        this.storage[contact].unreadCount = Math.max(0, this.storage[contact].unreadCount - 1);
+                        markedCount = 1;
+                    }
+                } else {
+                    // 标记所有未读消息
+                    this.storage[contact].messages.forEach(msg => {
+                        if (!msg.read && !msg.fromUser) {
+                            msg.read = true;
+                            markedCount++;
+                        }
+                    });
+                    this.storage[contact].unreadCount = 0;
+                }
+                
+                if (markedCount > 0) {
+                    this.save();
+                    console.log(`📱 标记了 ${markedCount} 条消息为已读（${contact}）`);
+                }
+                
+                return markedCount;
+            },
+            
+            // 获取对话历史
+            getConversation: function(contact, limit = 20) {
+                if (!this.storage[contact]) return [];
+                return this.storage[contact].messages.slice(-limit);
+            },
+            
+            // 获取完整对话历史
+            getFullConversation: function(contact) {
+                if (!this.storage[contact]) return [];
+                return this.storage[contact].messages;
+            },
+            
+            // 清除对话
+            clearConversation: function(contact) {
+                if (this.storage[contact]) {
+                    this.storage[contact].messages = [];
+                    this.storage[contact].unreadCount = 0;
+                    this.save();
+                    console.log(`📱 已清除 ${contact} 的对话历史`);
+                }
+            },
+            
+            // 获取所有联系人的未读总数
+            getTotalUnreadCount: function() {
+                return Object.values(this.storage).reduce((total, contact) => total + contact.unreadCount, 0);
+            },
+            
+            // 获取所有联系人
+            getAllContacts: function() {
+                return Object.keys(this.storage);
+            },
+            
+            // 获取联系人的未读数量
+            getContactUnreadCount: function(contact) {
+                return this.storage[contact] ? this.storage[contact].unreadCount : 0;
+            },
+            
+            // 导出所有数据（用于调试）
+            exportData: function() {
+                return JSON.stringify(this.storage, null, 2);
+            },
+            
+            // 导入数据（用于恢复）
+            importData: function(data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    if (typeof parsed === 'object') {
+                        this.storage = parsed;
+                        this.save();
+                        return true;
+                    }
+                } catch (error) {
+                    console.error('导入数据失败:', error);
+                }
+                return false;
+            }
+        },
+        
+        // ================================
         // 辅助功能
         // ================================
         
-        // 等待酒馆助手加载
+        // 等待酒馆助手加载 - 改进版
         _waitForTavernHelper: async function() {
             return new Promise((resolve, reject) => {
                 if (window.parent && window.parent.TavernHelper) {
+                    console.log('✅ 酒馆助手已加载');
                     resolve(window.parent.TavernHelper);
                     return;
                 }
                 
                 let retries = 0;
+                const maxRetries = CONFIG.maxRetries; // 30次，15秒超时
+                const retryDelay = CONFIG.retryDelay;
+                
                 const interval = setInterval(() => {
                     retries++;
                     
                     if (window.parent && window.parent.TavernHelper) {
                         clearInterval(interval);
+                        console.log('✅ 酒馆助手已加载');
                         resolve(window.parent.TavernHelper);
-                    } else if (retries >= CONFIG.maxRetries) {
+                    } else if (retries >= maxRetries) {
                         clearInterval(interval);
-                        reject(new Error('酒馆助手加载超时'));
+                        console.error('❌ 酒馆助手加载超时');
+                        reject(new Error('酒馆助手加载超时，请确保已安装酒馆助手扩展'));
+                    } else if (retries % 5 === 0) {
+                        console.log(`⏳ 等待酒馆助手加载... (${retries}/${maxRetries})`);
                     }
-                }, CONFIG.retryDelay);
+                }, retryDelay);
             });
         },
         
@@ -496,12 +814,15 @@
                             mutation.addedNodes.forEach((node) => {
                                 if (node.nodeType === 1 && node.textContent) {
                                     const text = node.textContent.trim();
-                                    // 简单判断是否为AI回复（不包含特定标记）
+                                    // 改进的判断逻辑
                                     if (text.length > 10 && 
                                         !text.includes('User:') && 
                                         !text.includes('玩家:') && 
                                         !text.includes('[玩家]') &&
-                                        !text.includes('System:')) {
+                                        !text.includes('System:') &&
+                                        !text.includes('系统:') &&
+                                        !text.includes('角色列表') &&
+                                        !text.includes('变量更新')) {
                                         console.log('📥 监听到可能的AI回复:', text.substring(0, 50));
                                         callback(text);
                                     }
@@ -517,6 +838,8 @@
                     '.chat-messages',
                     '.messages',
                     '#messages',
+                    '#mes_strip',
+                    '.mes_strip',
                     'body' // 最后回退到body
                 ];
                 
@@ -533,8 +856,11 @@
                     }
                 }
                 
+                return observer; // 返回observer以便可以停止监听
+                
             } catch (error) {
                 console.error('监听AI回复失败:', error);
+                return null;
             }
         },
         
@@ -588,7 +914,9 @@
                     return {
                         type: 'tavern-helper',
                         version: window.parent.TavernHelper.getTavernHelperVersion ? 
-                                 window.parent.TavernHelper.getTavernHelperVersion() : 'unknown'
+                                 window.parent.TavernHelper.getTavernHelperVersion() : 'unknown',
+                        tavernVersion: window.parent.TavernHelper.getTavernVersion ? 
+                                      window.parent.TavernHelper.getTavernVersion() : 'unknown'
                     };
                 }
                 
@@ -614,28 +942,71 @@
         },
         
         // ================================
-        // 调试和诊断
+        // 调试和诊断 - 改进版
         // ================================
         
         // 运行诊断
         runDiagnostics: function() {
             const results = {
-                tavernHelper: !!window.parent?.TavernHelper,
+                tavernHelper: {
+                    available: !!window.parent?.TavernHelper,
+                    version: window.parent?.TavernHelper?.getTavernHelperVersion ? 
+                            window.parent.TavernHelper.getTavernHelperVersion() : 'unknown'
+                },
                 sillyTavern: !!window.parent?.SillyTavern,
                 canAccessParent: !!window.parent,
                 inputElements: document.querySelectorAll('textarea').length,
                 sendButtons: this._findSendButton() ? 'found' : 'not found',
                 currentCharacter: this.getCurrentCharacter(),
-                stVersion: this.detectSTVersion()
+                stVersion: this.detectSTVersion(),
+                smsStorage: {
+                    contacts: Object.keys(this.SMSManager.storage).length,
+                    totalMessages: Object.values(this.SMSManager.storage)
+                        .reduce((total, contact) => total + contact.messages.length, 0),
+                    totalUnread: this.SMSManager.getTotalUnreadCount()
+                }
             };
             
             console.group('🔧 催眠APP扩展诊断结果');
             Object.entries(results).forEach(([key, value]) => {
-                console.log(`${key}:`, value);
+                if (typeof value === 'object') {
+                    console.log(`${key}:`);
+                    console.dir(value);
+                } else {
+                    console.log(`${key}:`, value);
+                }
             });
             console.groupEnd();
             
             return results;
+        },
+        
+        // 重置短信存储
+        resetSMSStorage: function() {
+            if (confirm('确定要重置所有短信数据吗？此操作不可撤销！')) {
+                this.SMSManager.storage = {};
+                this.SMSManager.save();
+                this.showNotification('短信存储已重置', 'success');
+                return true;
+            }
+            return false;
+        },
+        
+        // 导出短信数据
+        exportSMSData: function() {
+            const data = this.SMSManager.exportData();
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hypnosis-sms-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            this.showNotification('短信数据已导出', 'success');
+            return data;
         }
     };
     
@@ -700,6 +1071,17 @@
             #hypnosis-extension-iframe:hover .resize-handle {
                 opacity: 1;
             }
+            
+            /* 未读徽章动画 */
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+                100% { transform: scale(1); }
+            }
+            
+            .unread-badge {
+                animation: pulse 2s infinite;
+            }
         `;
         document.head.appendChild(style);
     };
@@ -709,11 +1091,14 @@
         try {
             addGlobalStyles();
             
+            // 初始化短信管理器
+            STInterface.SMSManager.init();
+            
             // 运行诊断（调试模式）
             if (CONFIG.debug) {
                 setTimeout(() => {
                     STInterface.runDiagnostics();
-                }, 1000);
+                }, 2000);
             }
             
             // 发送初始化完成通知
@@ -725,6 +1110,7 @@
             
         } catch (error) {
             console.error('初始化失败:', error);
+            STInterface.showNotification(`初始化失败: ${error.message}`, 'error');
         }
     };
     
