@@ -1161,76 +1161,33 @@
         }
         
         // 等待STInterface加载
-function waitForSTInterface() {
-    return new Promise((resolve, reject) => {
-        if (window.STInterface) {
-            console.log('✅ STInterface已加载');
-            
-            // 测试通信
-            testCommunication().then(() => {
-                resolve();
-            }).catch(error => {
-                console.warn('通信测试失败，使用备用模式:', error);
-                // 即使通信失败，也继续加载（使用备用角色）
-                resolve();
+        function waitForSTInterface() {
+            return new Promise((resolve, reject) => {
+                if (window.STInterface) {
+                    console.log('✅ STInterface已加载');
+                    resolve();
+                    return;
+                }
+                
+                let attempts = 0;
+                const maxAttempts = 20; // 10秒超时
+                
+                const checkInterval = setInterval(() => {
+                    attempts++;
+                    
+                    if (window.STInterface) {
+                        clearInterval(checkInterval);
+                        console.log('✅ STInterface已加载');
+                        resolve();
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        console.error('❌ STInterface加载超时');
+                        reject(new Error('STInterface加载超时'));
+                    }
+                }, 500);
             });
-            return;
         }
         
-        let attempts = 0;
-        const maxAttempts = 30; // 15秒超时
-        
-        const checkInterval = setInterval(() => {
-            attempts++;
-            
-            if (window.STInterface) {
-                clearInterval(checkInterval);
-                console.log('✅ STInterface已加载');
-                
-                testCommunication().then(() => {
-                    resolve();
-                }).catch(() => {
-                    // 通信失败也继续
-                    resolve();
-                });
-            } else if (attempts >= maxAttempts) {
-                clearInterval(checkInterval);
-                console.warn('⚠️ STInterface加载超时，使用备用模式');
-                
-                // 创建备用STInterface
-                window.STInterface = {
-                    getCharacters: () => Promise.resolve([
-                        { name: '西园寺爱丽莎', phone: '090-1234-0001', status: 'online', avatar: '👑' },
-                        { name: '月咏深雪', phone: '090-1234-0002', status: 'online', avatar: '❄️' },
-                        { name: '犬冢夏美', phone: '090-1234-0003', status: 'busy', avatar: '🐕' },
-                        { name: '阿宅君', phone: '090-1234-0004', status: 'offline', avatar: '👓' }
-                    ]),
-                    sendUserMessage: async (message) => {
-                        console.log('备用模式发送消息:', message);
-                        return { success: false, error: '通信未建立' };
-                    },
-                    showNotification: (msg, type) => {
-                        console.log(`通知[${type}]:`, msg);
-                    }
-                };
-                
-                resolve();
-            }
-        }, 500);
-    });
-}
-
-// 测试通信函数
-async function testCommunication() {
-    try {
-        console.log('🔧 测试通信...');
-        const result = await window.STInterface.runDiagnostics?.();
-        console.log('通信测试结果:', result);
-        return true;
-    } catch (error) {
-        throw error;
-    }
-}        
         // 加载联系人
         async function loadContacts() {
             console.log('📇 开始加载联系人...');
@@ -1784,4 +1741,3 @@ async function testCommunication() {
     </script>
 </body>
 </html>
-
