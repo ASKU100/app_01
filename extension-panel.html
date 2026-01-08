@@ -5,129 +5,77 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>催眠APP扩展 - ST集成版</title>
     <style>
-        /* ====== 基础样式 ====== */
+        /* 精简的CSS样式，保留核心功能 */
         :root {
             --primary-color: #667eea;
-            --primary-dark: #5a67d8;
             --secondary-color: #764ba2;
-            --success-color: #48bb78;
-            --warning-color: #ed8936;
-            --danger-color: #f56565;
-            --info-color: #4299e1;
             --bg-primary: #f7fafc;
-            --bg-secondary: #edf2f7;
             --bg-card: #ffffff;
             --text-primary: #2d3748;
-            --text-secondary: #718096;
             --border-color: #e2e8f0;
             --border-radius: 12px;
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        
         #hypnosis-extension {
             width: 100%;
             height: 100%;
-            min-height: 400px;
             background: var(--bg-card);
             border-radius: var(--border-radius);
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            position: relative;
         }
-
-        /* 头部样式 */
+        
         .extension-header {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            padding: 12px 16px;
+            padding: 16px 20px;
             color: white;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
-        .app-icon {
-            width: 32px;
-            height: 32px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-        }
-
-        .close-btn {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 6px;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        /* 标签页样式 */
+        
+        .app-icon { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .app-title h3 { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+        .app-subtitle { font-size: 11px; opacity: 0.9; }
+        
         .extension-tabs {
             display: flex;
-            background: var(--bg-secondary);
+            background: var(--bg-primary);
             border-bottom: 1px solid var(--border-color);
-            padding: 6px 12px 0;
+            padding: 8px 16px 0;
         }
-
+        
         .tab-button {
             flex: 1;
             background: none;
             border: none;
-            padding: 8px 6px;
+            padding: 12px 8px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
             cursor: pointer;
-            color: var(--text-secondary);
-            font-size: 11px;
-            position: relative;
-            border-radius: 6px 6px 0 0;
+            color: var(--text-primary);
+            font-size: 12px;
+            border-radius: 8px 8px 0 0;
+            min-height: 44px;
         }
-
+        
         .tab-button.active {
-            color: var(--primary-color);
             background: var(--bg-card);
+            color: var(--primary-color);
         }
-
-        .tab-button.active::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            left: 8px;
-            right: 8px;
-            height: 2px;
-            background: var(--primary-color);
-        }
-
-        /* 内容区域 */
+        
         .tab-content-container {
             flex: 1;
             overflow: hidden;
             position: relative;
         }
-
+        
         .tab-content {
             position: absolute;
             top: 0;
@@ -137,73 +85,62 @@
             overflow-y: auto;
             display: none;
             flex-direction: column;
-            padding: 16px;
+            padding: 20px;
         }
-
-        .tab-content.active {
-            display: flex;
-        }
-
-        /* 通讯录样式 */
-        .search-box {
-            position: relative;
-            margin-bottom: 12px;
-        }
-
+        
+        .tab-content.active { display: flex; }
+        
+        .search-box { margin-bottom: 16px; }
         .search-box input {
             width: 100%;
-            padding: 8px 8px 8px 30px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 12px;
+            padding: 12px 14px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 13px;
         }
-
+        
         .contacts-list {
             flex: 1;
             overflow-y: auto;
+            min-height: 0;
         }
-
+        
         .contact-item {
             display: flex;
             align-items: center;
-            padding: 8px;
-            border-radius: 8px;
+            padding: 12px;
+            border-radius: var(--border-radius);
             cursor: pointer;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             border: 1px solid transparent;
-            transition: all 0.2s;
         }
-
-        .contact-item:hover {
-            background: var(--bg-secondary);
-            border-color: var(--border-color);
-        }
-
+        
+        .contact-item:hover { background: #f1f5f9; border-color: var(--border-color); }
+        
         .contact-avatar {
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            border-radius: 8px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 18px;
             color: white;
-            margin-right: 10px;
-            font-size: 14px;
+            margin-right: 12px;
         }
-
-        .contact-name {
-            font-weight: 600;
-            color: var(--text-primary);
-            font-size: 12px;
+        
+        .contact-name { font-weight: 600; margin-bottom: 2px; }
+        .contact-phone { font-size: 11px; color: #718096; }
+        
+        .contacts-stats {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 12px;
         }
-
-        .contact-phone {
-            font-size: 10px;
-            color: var(--text-secondary);
-        }
-
-        /* 加载状态 */
+        
         .loading-container {
             display: flex;
             flex-direction: column;
@@ -212,61 +149,53 @@
             padding: 40px;
             text-align: center;
         }
-
+        
         .loading-spinner {
-            width: 30px;
-            height: 30px;
-            border: 2px solid var(--border-color);
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
             border-top-color: var(--primary-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
         }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div id="hypnosis-extension">
-        <!-- 头部 -->
         <div class="extension-header">
-            <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="header-left">
                 <div class="app-icon">✨</div>
-                <div>
-                    <div style="font-weight: 600; font-size: 14px;">催眠APP扩展</div>
-                    <div style="font-size: 10px; opacity: 0.9;">动态通讯录</div>
+                <div class="app-title">
+                    <h3>催眠APP扩展</h3>
+                    <p class="app-subtitle">动态角色加载版</p>
                 </div>
             </div>
-            <button class="close-btn" onclick="closeExtension()">
-                ✕
+            <button class="close-btn" onclick="window.parent.postMessage({type: 'close_extension'}, '*')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
             </button>
         </div>
 
-        <!-- 标签页 -->
         <div class="extension-tabs">
             <button class="tab-button active" onclick="switchTab('contacts')">
-                <span style="font-size: 14px;">📞</span>
-                <span>通讯录</span>
+                <span class="tab-icon">📞</span>
+                <span class="tab-label">通讯录</span>
             </button>
             <button class="tab-button" onclick="switchTab('sms')">
-                <span style="font-size: 14px;">💬</span>
-                <span>短信</span>
-            </button>
-            <button class="tab-button" onclick="switchTab('settings')">
-                <span style="font-size: 14px;">⚙️</span>
-                <span>设置</span>
+                <span class="tab-icon">💬</span>
+                <span class="tab-label">短信</span>
             </button>
         </div>
 
-        <!-- 内容容器 -->
         <div class="tab-content-container">
-            <!-- 通讯录标签页 -->
             <div id="contacts-tab" class="tab-content active">
-                <div style="margin-bottom: 12px;">
-                    <h4 style="color: var(--text-primary); margin-bottom: 4px;">通讯录</h4>
-                    <p style="font-size: 11px; color: var(--text-secondary);">从[initvar]动态加载角色</p>
+                <div class="tab-header">
+                    <h4 class="tab-title">通讯录</h4>
+                    <p class="tab-description">从[initvar]变量动态加载角色</p>
                 </div>
                 
                 <div class="search-box">
@@ -276,148 +205,116 @@
                 <div class="contacts-list" id="contacts-list">
                     <div class="loading-container" id="contacts-loading">
                         <div class="loading-spinner"></div>
-                        <div class="loading-text" style="font-size: 12px; color: var(--text-secondary);">
-                            正在加载角色数据...
-                        </div>
+                        <div class="loading-text">正在从[initvar]变量加载角色...</div>
                     </div>
                 </div>
                 
-                <div style="display: flex; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--border-color);">
-                    <div style="text-align: center;">
-                        <div style="font-size: 10px; color: var(--text-secondary);">联系人</div>
-                        <div style="font-size: 16px; font-weight: 700; color: var(--primary-color);" id="contact-count">0</div>
-                    </div>
-                    <div style="text-align: center;">
-                        <div style="font-size: 10px; color: var(--text-secondary);">在线</div>
-                        <div style="font-size: 16px; font-weight: 700; color: var(--primary-color);" id="online-count">0</div>
-                    </div>
+                <div class="contacts-stats">
+                    <span class="stat-item">
+                        <span class="stat-label">联系人</span>
+                        <span class="stat-value" id="contact-count">0</span>
+                    </span>
+                    <span class="stat-item">
+                        <span class="stat-label">上次更新</span>
+                        <span class="stat-value" id="last-update">刚刚</span>
+                    </span>
                 </div>
             </div>
 
-            <!-- 短信标签页 -->
             <div id="sms-tab" class="tab-content">
-                <div style="margin-bottom: 12px;">
-                    <h4 style="color: var(--text-primary); margin-bottom: 4px;">短信</h4>
-                    <p style="font-size: 11px; color: var(--text-secondary);">发送消息到聊天</p>
+                <div class="tab-header">
+                    <h4 class="tab-title">短信</h4>
+                    <p class="tab-description">与SillyTavern聊天集成</p>
                 </div>
                 
-                <div style="margin-bottom: 12px;">
-                    <select id="sms-contact" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 12px;">
+                <div class="sms-recipient">
+                    <select id="sms-contact">
                         <option value="">选择联系人</option>
                     </select>
                 </div>
                 
-                <div style="flex: 1; display: flex; flex-direction: column; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 12px;">
-                    <div style="padding: 8px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); font-size: 11px; color: var(--text-secondary);">
-                        短信对话
+                <div class="sms-input-area">
+                    <textarea id="sms-input" placeholder="输入消息...（将直接发送到SillyTavern聊天）" rows="3"></textarea>
+                    <div class="input-actions">
+                        <button class="send-btn" onclick="sendSMS()">发送到聊天</button>
                     </div>
-                    <div style="flex: 1; padding: 12px; overflow-y: auto; background: var(--bg-primary);" id="sms-conversation">
-                        <div style="font-size: 11px; color: var(--text-secondary); text-align: center; padding: 20px;">
-                            选择联系人开始对话
-                        </div>
-                    </div>
-                </div>
-                
-                <div>
-                    <textarea id="sms-input" placeholder="输入消息..." style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 12px; min-height: 60px; resize: vertical;"></textarea>
-                    <button onclick="sendSMS()" style="width: 100%; padding: 8px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; border: none; border-radius: 8px; margin-top: 8px; cursor: pointer;">
-                        发送到聊天
-                    </button>
-                </div>
-            </div>
-
-            <!-- 设置标签页 -->
-            <div id="settings-tab" class="tab-content">
-                <div style="margin-bottom: 12px;">
-                    <h4 style="color: var(--text-primary); margin-bottom: 4px;">设置</h4>
-                    <p style="font-size: 11px; color: var(--text-secondary);">扩展配置</p>
-                </div>
-                
-                <div style="display: flex; flex-direction: column; gap: 12px;">
-                    <button onclick="reloadContacts()" style="padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; font-size: 12px;">
-                        重新加载通讯录
-                    </button>
-                    <button onclick="testConnection()" style="padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; font-size: 12px;">
-                        测试连接
-                    </button>
-                    <button onclick="showDebugInfo()" style="padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; font-size: 12px;">
-                        显示调试信息
-                    </button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // ================================
-        // 全局变量
-        // ================================
         let contacts = [];
-        let messageQueue = [];
+        let lastUpdateTime = new Date();
         
-        // ================================
-        // 初始化
-        // ================================
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('扩展面板加载完成');
-            
-            // 初始化UI事件
-            initUIEvents();
-            
-            // 初始化通讯录
-            initContacts();
-            
-            // 设置消息监听器
+            console.log('扩展面板初始化');
+            loadContacts();
             setupMessageListener();
+            updateLastUpdateTime();
         });
         
-        // ================================
-        // 通讯录功能
-        // ================================
-        async function initContacts() {
-            console.log('正在初始化通讯录...');
-            
-            try {
-                // 发送消息请求角色数据
-                const response = await sendMessageToParent({
-                    type: 'getCharacters'
-                });
+        function setupMessageListener() {
+            window.addEventListener('message', function(event) {
+                // 验证来源
+                if (event.origin !== 'https://asku100.github.io' && event.origin !== window.location.origin) return;
                 
-                if (response && response.data) {
-                    contacts = response.data;
-                    console.log(`成功加载 ${contacts.length} 个角色`);
+                console.log('收到父页面消息:', event.data);
+                
+                if (event.data.type === 'characters_data') {
+                    contacts = event.data.characters;
                     renderContacts();
                     updateContactStats();
-                    initSMSContacts();
+                    updateSMSContacts();
+                    updateLastUpdateTime();
                     
-                    // 隐藏加载状态
-                    document.getElementById('contacts-loading').style.display = 'none';
-                } else {
-                    showError('无法获取角色数据');
+                    const loadingEl = document.getElementById('contacts-loading');
+                    if (loadingEl) loadingEl.style.display = 'none';
+                    
+                } else if (event.data.type === 'characters_updated') {
+                    loadContacts();
+                } else if (event.data.type === 'close_extension') {
+                    // 通知父页面关闭扩展
+                    window.parent.postMessage({type: 'close_extension'}, '*');
                 }
-            } catch (error) {
-                console.error('加载通讯录失败:', error);
-                showError(`加载失败: ${error.message}`);
-            }
+            });
+        }
+        
+        function loadContacts() {
+            console.log('请求加载角色数据');
+            window.parent.postMessage({type: 'get_characters'}, '*');
         }
         
         function renderContacts() {
             const list = document.getElementById('contacts-list');
             
-            if (contacts.length === 0) {
-                list.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary); font-size: 12px;">没有找到联系人</div>';
+            if (!contacts || contacts.length === 0) {
+                list.innerHTML = `
+                    <div class="loading-container">
+                        <div class="placeholder-icon">📱</div>
+                        <p>没有找到联系人</p>
+                        <p style="font-size:12px; margin-top:8px;">AI通过变量更新添加新角色后，这里会自动显示</p>
+                    </div>
+                `;
                 return;
             }
             
             let html = '';
             contacts.forEach(contact => {
+                const metadataHTML = contact.metadata ? `
+                    <div style="font-size:10px; color:#718096; margin-top:4px;">
+                        ${contact.metadata.好感度 !== undefined ? `好感度: ${contact.metadata.好感度}` : ''}
+                        ${contact.metadata.警戒度 !== undefined ? ` | 警戒度: ${contact.metadata.警戒度}` : ''}
+                    </div>
+                ` : '';
+                
                 html += `
-                    <div class="contact-item" onclick="selectContact('${contact.name}')" data-name="${contact.name.toLowerCase()}">
-                        <div class="contact-avatar">${contact.avatar || '👤'}</div>
-                        <div>
+                    <div class="contact-item" onclick="startSMSWith('${contact.name}')" data-name="${contact.name.toLowerCase()}">
+                        <div class="contact-avatar">${contact.avatar}</div>
+                        <div class="contact-info">
                             <div class="contact-name">${contact.name}</div>
-                            <div class="contact-phone">${contact.phone || '未设置'}</div>
-                            ${contact.metadata ? `<div style="font-size: 9px; color: var(--text-secondary); margin-top: 2px;">好感度: ${contact.metadata.好感度 || 0}</div>` : ''}
+                            <div class="contact-phone">${contact.phone}</div>
+                            ${metadataHTML}
                         </div>
                     </div>
                 `;
@@ -426,44 +323,36 @@
             list.innerHTML = html;
         }
         
-        function filterContacts() {
-            const searchTerm = document.getElementById('contact-search').value.toLowerCase();
-            const contactItems = document.querySelectorAll('.contact-item');
-            
-            contactItems.forEach(item => {
-                const name = item.getAttribute('data-name');
-                if (name.includes(searchTerm)) {
-                    item.style.display = 'flex';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        }
-        
         function updateContactStats() {
             document.getElementById('contact-count').textContent = contacts.length;
-            document.getElementById('online-count').textContent = contacts.length;
         }
         
-        function selectContact(name) {
-            switchTab('sms');
-            document.getElementById('sms-contact').value = name;
-            document.getElementById('sms-input').focus();
-            addSystemMessage(`已选择联系人: ${name}`);
+        function updateLastUpdateTime() {
+            const now = new Date();
+            const diff = Math.floor((now - lastUpdateTime) / 1000);
+            
+            let text = '刚刚';
+            if (diff > 60) text = `${Math.floor(diff/60)}分钟前`;
+            if (diff > 3600) text = `${Math.floor(diff/3600)}小时前`;
+            
+            document.getElementById('last-update').textContent = text;
+            lastUpdateTime = now;
         }
         
-        // ================================
-        // 短信功能
-        // ================================
-        function initSMSContacts() {
+        function updateSMSContacts() {
             const select = document.getElementById('sms-contact');
             
-            // 清除现有选项（除了第一个）
-            while (select.options.length > 1) {
-                select.remove(1);
+            while (select.options.length > 1) select.remove(1);
+            
+            if (contacts.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '暂无联系人';
+                option.disabled = true;
+                select.appendChild(option);
+                return;
             }
             
-            // 添加动态角色选项
             contacts.forEach(contact => {
                 const option = document.createElement('option');
                 option.value = contact.name;
@@ -472,172 +361,60 @@
             });
         }
         
+        function filterContacts() {
+            const searchTerm = document.getElementById('contact-search').value.toLowerCase();
+            const contactItems = document.querySelectorAll('.contact-item');
+            
+            contactItems.forEach(item => {
+                const name = item.getAttribute('data-name');
+                if (name && name.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+        
+        function startSMSWith(name) {
+            switchTab('sms');
+            document.getElementById('sms-contact').value = name;
+            document.getElementById('sms-input').focus();
+        }
+        
         function sendSMS() {
             const contact = document.getElementById('sms-contact').value;
             const message = document.getElementById('sms-input').value.trim();
             
             if (!contact) {
-                addSystemMessage('请先选择联系人');
+                alert('请先选择联系人');
                 return;
             }
             
             if (!message) {
-                addSystemMessage('请输入消息内容');
+                alert('请输入消息内容');
                 return;
             }
             
-            // 添加消息到对话
-            addSentMessage(message);
-            
-            // 发送消息到父页面（转发到聊天）
-            sendMessageToParent({
-                type: 'sendMessage',
-                data: {
-                    message: message,
-                    contact: contact
-                }
-            });
+            // 发送消息到父页面
+            window.parent.postMessage({
+                type: 'send_message',
+                message: message
+            }, '*');
             
             // 清空输入框
             document.getElementById('sms-input').value = '';
         }
         
-        function addSentMessage(text) {
-            const conversation = document.getElementById('sms-conversation');
-            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            conversation.innerHTML += `
-                <div style="margin-bottom: 8px; text-align: right;">
-                    <div style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 6px 10px; border-radius: 12px; display: inline-block; max-width: 80%; font-size: 12px;">
-                        ${escapeHtml(text)}
-                    </div>
-                    <div style="font-size: 9px; color: var(--text-secondary); margin-top: 2px;">${time}</div>
-                </div>
-            `;
-            
-            conversation.scrollTop = conversation.scrollHeight;
-        }
-        
-        function addSystemMessage(text) {
-            const conversation = document.getElementById('sms-conversation');
-            conversation.innerHTML += `
-                <div style="margin-bottom: 8px; text-align: center;">
-                    <div style="background: var(--bg-secondary); color: var(--text-secondary); padding: 4px 8px; border-radius: 6px; display: inline-block; font-size: 11px;">
-                        ${escapeHtml(text)}
-                    </div>
-                </div>
-            `;
-            
-            conversation.scrollTop = conversation.scrollHeight;
-        }
-        
-        // ================================
-        // 通信功能
-        // ================================
-        function setupMessageListener() {
-            window.addEventListener('message', function(event) {
-                // 安全检查
-                if (event.origin !== window.location.origin) return;
-                
-                console.log('收到消息:', event.data);
-                
-                // 处理消息
-                const message = event.data;
-                const callback = messageQueue.find(q => q.id === message.id);
-                
-                if (callback) {
-                    callback.resolve(message);
-                    messageQueue = messageQueue.filter(q => q.id !== message.id);
-                }
-            });
-        }
-        
-        function sendMessageToParent(message) {
-            return new Promise((resolve, reject) => {
-                const id = Date.now() + Math.random();
-                
-                messageQueue.push({
-                    id: id,
-                    resolve: resolve,
-                    reject: reject
-                });
-                
-                // 发送消息到父页面
-                window.parent.postMessage({
-                    ...message,
-                    id: id
-                }, '*');
-                
-                // 设置超时
-                setTimeout(() => {
-                    const index = messageQueue.findIndex(q => q.id === id);
-                    if (index > -1) {
-                        messageQueue.splice(index, 1);
-                        reject(new Error('请求超时'));
-                    }
-                }, 5000);
-            });
-        }
-        
-        // ================================
-        // UI控制
-        // ================================
-        function initUIEvents() {
-            // 短信输入框回车发送
-            document.getElementById('sms-input').addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendSMS();
-                }
-            });
-        }
-        
         function switchTab(tabName) {
-            // 更新标签按钮状态
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
             event.currentTarget.classList.add('active');
             document.getElementById(`${tabName}-tab`).classList.add('active');
-        }
-        
-        function closeExtension() {
-            if (window.parent) {
-                window.parent.postMessage({ type: 'closeExtension' }, '*');
+            
+            if (tabName === 'contacts' && contacts.length === 0) {
+                loadContacts();
             }
-        }
-        
-        function showError(message) {
-            console.error('错误:', message);
-            addSystemMessage(`错误: ${message}`);
-        }
-        
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
-        // ================================
-        // 设置功能
-        // ================================
-        function reloadContacts() {
-            document.getElementById('contacts-loading').style.display = 'flex';
-            initContacts();
-        }
-        
-        function testConnection() {
-            addSystemMessage('正在测试连接...');
-            sendMessageToParent({ type: 'testConnection' })
-                .then(() => addSystemMessage('连接正常'))
-                .catch(error => addSystemMessage(`连接失败: ${error.message}`));
-        }
-        
-        function showDebugInfo() {
-            console.log('调试信息:');
-            console.log('联系人数量:', contacts.length);
-            console.log('消息队列:', messageQueue.length);
-            addSystemMessage(`调试信息已输出到控制台 (${contacts.length}个联系人)`);
         }
     </script>
 </body>
