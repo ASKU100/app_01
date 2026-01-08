@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>催眠APP - 通讯录界面</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            width: 100%;
+            height: 100%;
+            background: white;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .contacts-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 标签页样式 */
+        .contacts-tabs {
+            display: flex;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 12px 16px 0;
+        }
+        
+        .tab-button {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 10px 8px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            position: relative;
+        }
+        
+        .tab-button.active {
+            color: white;
+        }
+        
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 16px;
+            right: 16px;
+            height: 3px;
+            background: white;
+            border-radius: 2px 2px 0 0;
+        }
+        
+        .tab-icon {
+            font-size: 16px;
+        }
+        
+        .tab-label {
+            font-size: 11px;
+        }
+        
+        /* 标签内容 */
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            display: none;
+            padding: 16px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* 通讯录样式 */
+        .contacts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .contact-item:hover {
+            background: #edf2f7;
+            transform: translateX(2px);
+        }
+        
+        .contact-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+            margin-right: 12px;
+        }
+        
+        .contact-info {
+            flex: 1;
+        }
+        
+        .contact-name {
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 2px;
+        }
+        
+        .contact-phone {
+            color: #718096;
+            font-size: 11px;
+        }
+        
+        .contact-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            color: #718096;
+            margin-top: 4px;
+        }
+        
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+        
+        .status-online { background: #48bb78; }
+        .status-busy { background: #ed8936; }
+        .status-offline { background: #a0aec0; }
+        
+        /* 短信样式 */
+        .sms-conversation {
+            height: 200px;
+            overflow-y: auto;
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .sms-input-container {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 12px;
+        }
+        
+        .sms-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 13px;
+            resize: vertical;
+            min-height: 60px;
+            margin-bottom: 8px;
+        }
+        
+        .sms-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .sms-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        /* 头部和关闭按钮 */
+        .contacts-header {
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .contacts-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .close-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="contacts-container">
+        <div class="contacts-header">
+            <div class="contacts-title">通讯录与短信</div>
+            <button class="close-btn" onclick="closeContacts()">✕</button>
+        </div>
+        
+        <div class="contacts-tabs">
+            <button class="tab-button active" onclick="switchTab('contacts')">
+                <span class="tab-icon">📞</span>
+                <span class="tab-label">通讯录</span>
+            </button>
+            <button class="tab-button" onclick="switchTab('sms')">
+                <span class="tab-icon">💬</span>
+                <span class="tab-label">短信</span>
+            </button>
+        </div>
+        
+        <!-- 通讯录标签页 -->
+        <div id="contacts-tab" class="tab-content active">
+            <div style="margin-bottom: 12px;">
+                <input type="text" placeholder="搜索联系人..." 
+                       style="width:100%; padding:10px 12px; border:2px solid #e2e8f0; border-radius:8px; font-size:13px;">
+            </div>
+            
+            <div class="contacts-list" id="contacts-list">
+                <!-- 动态加载联系人 -->
+            </div>
+            
+            <div style="margin-top: 16px; display: flex; gap: 8px;">
+                <button onclick="scanForContacts()" style="flex:1; padding:10px; background:#edf2f7; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; cursor:pointer;">
+                    🔍 扫描角色
+                </button>
+                <button onclick="addNewContact()" style="flex:1; padding:10px; background:#667eea; color:white; border:none; border-radius:8px; font-size:12px; cursor:pointer;">
+                    ➕ 添加角色
+                </button>
+            </div>
+        </div>
+        
+        <!-- 短信标签页 -->
+        <div id="sms-tab" class="tab-content">
+            <div style="margin-bottom: 12px;">
+                <select style="width:100%; padding:10px 12px; border:2px solid #e2e8f0; border-radius:8px; font-size:13px;">
+                    <option>选择联系人...</option>
+                </select>
+            </div>
+            
+            <div class="sms-conversation" id="sms-conversation">
+                <!-- 短信对话显示在这里 -->
+            </div>
+            
+            <div class="sms-input-container">
+                <textarea class="sms-input" placeholder="输入消息..."></textarea>
+                <div class="sms-actions">
+                    <span style="font-size:11px; color:#718096;">0/500</span>
+                    <button class="send-btn" onclick="sendSMS()">
+                        <span>✈️</span> 发送
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化数据
+        let contacts = [];
+        let currentTab = 'contacts';
+        
+        // 关闭界面
+        function closeContacts() {
+            window.parent.postMessage({ type: 'HIDE_CONTACTS' }, '*');
+        }
+        
+        // 切换标签页
+        function switchTab(tabName) {
+            currentTab = tabName;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            // 更新内容显示
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+        
+        // 扫描联系人
+        function scanForContacts() {
+            if (window.parent && window.parent.STInterface) {
+                window.parent.STInterface.showNotification('开始扫描聊天记录中的角色...', 'info');
+                
+                // 这里可以调用STInterface的方法扫描角色
+                setTimeout(() => {
+                    loadContacts();
+                }, 1000);
+            }
+        }
+        
+        // 添加新联系人
+        function addNewContact() {
+            const name = prompt('请输入角色名称：');
+            if (!name) return;
+            
+            const newContact = {
+                name: name,
+                phone: generatePhoneNumber(name),
+                status: 'online',
+                avatar: generateAvatar(name)
+            };
+            
+            contacts.push(newContact);
+            renderContacts();
+            
+            // 请求AI介绍这个角色
+            if (window.parent && window.parent.STInterface) {
+                window.parent.STInterface.sendUserMessage(`请介绍角色"${name}"，并将ta添加到通讯录中。`);
+            }
+        }
+        
+        // 加载联系人
+        function loadContacts() {
+            // 模拟数据
+            const sampleContacts = [
+                { name: '西园寺爱丽莎', phone: '090-1234-5678', status: 'online', avatar: '👑' },
+                { name: '月咏深雪', phone: '090-8765-4321', status: 'online', avatar: '❄️' },
+                { name: '犬冢夏美', phone: '090-1111-2222', status: 'busy', avatar: '🐕' },
+                { name: '阿宅君', phone: '090-3333-4444', status: 'offline', avatar: '👓' }
+            ];
+            
+            contacts = sampleContacts;
+            renderContacts();
+        }
+        
+        // 渲染联系人列表
+        function renderContacts() {
+            const list = document.getElementById('contacts-list');
+            list.innerHTML = '';
+            
+            contacts.forEach(contact => {
+                const statusClass = `status-${contact.status}`;
+                const item = document.createElement('div');
+                item.className = 'contact-item';
+                item.onclick = () => startChat(contact.name);
+                item.innerHTML = `
+                    <div class="contact-avatar">${contact.avatar}</div>
+                    <div class="contact-info">
+                        <div class="contact-name">${contact.name}</div>
+                        <div class="contact-phone">${contact.phone}</div>
+                        <div class="contact-status">
+                            <span class="status-dot ${statusClass}"></span>
+                            <span>${contact.status === 'online' ? '在线' : contact.status === 'busy' ? '忙碌' : '离线'}</span>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+        
+        // 开始聊天
+        function startChat(name) {
+            switchTab('sms');
+            // 更新短信界面
+            if (window.parent && window.parent.STInterface) {
+                window.parent.STInterface.showNotification(`开始与${name}对话`, 'info');
+            }
+        }
+        
+        // 发送短信
+        function sendSMS() {
+            const input = document.querySelector('.sms-input');
+            const text = input.value.trim();
+            
+            if (!text) return;
+            
+            if (window.parent && window.parent.STInterface) {
+                window.parent.STInterface.sendUserMessage(text);
+                input.value = '';
+                
+                // 添加到对话记录
+                const conversation = document.getElementById('sms-conversation');
+                const msgDiv = document.createElement('div');
+                msgDiv.innerHTML = `
+                    <div style="text-align:right; margin-bottom:8px;">
+                        <div style="background:#667eea; color:white; padding:8px 12px; border-radius:12px; display:inline-block; max-width:80%; text-align:left;">
+                            ${escapeHtml(text)}
+                        </div>
+                    </div>
+                `;
+                conversation.appendChild(msgDiv);
+                conversation.scrollTop = conversation.scrollHeight;
+            }
+        }
+        
+        // 辅助函数
+        function generatePhoneNumber(name) {
+            const hash = Array.from(name).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            return `090-${String((hash * 13) % 10000).padStart(4, '0')}-${String((hash * 17) % 10000).padStart(4, '0')}`;
+        }
+        
+        function generateAvatar(name) {
+            const avatars = ['👑', '❄️', '🐕', '👓', '🌸', '🎀', '🐱', '🦊', '🐰', '🦋'];
+            const hash = Array.from(name).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            return avatars[hash % avatars.length];
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadContacts();
+            
+            // 监听AI回复
+            window.addEventListener('message', function(event) {
+                if (event.data.type === 'AI_RESPONSE') {
+                    // 添加AI回复到对话
+                    const conversation = document.getElementById('sms-conversation');
+                    const msgDiv = document.createElement('div');
+                    msgDiv.innerHTML = `
+                        <div style="margin-bottom:8px;">
+                            <div style="background:#edf2f7; color:#2d3748; padding:8px 12px; border-radius:12px; display:inline-block; max-width:80%;">
+                                ${escapeHtml(event.data.text.substring(0, 100))}
+                            </div>
+                        </div>
+                    `;
+                    conversation.appendChild(msgDiv);
+                    conversation.scrollTop = conversation.scrollHeight;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
