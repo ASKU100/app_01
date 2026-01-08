@@ -143,6 +143,7 @@
             border-bottom: 1px solid var(--border-color);
             padding: 8px 16px 0;
             flex-shrink: 0;
+            position: relative;
         }
 
         .tab-button {
@@ -191,6 +192,30 @@
 
         .tab-label {
             font-size: 11px;
+        }
+
+        /* 未读徽章样式 */
+        .unread-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 2s infinite;
+            z-index: 10;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
 
         /* ====== 标签页内容容器 ====== */
@@ -420,11 +445,17 @@
             margin-bottom: 8px;
             min-height: 44px;
             border: 1px solid transparent;
+            position: relative;
         }
 
         .contact-item:hover {
             background: var(--bg-hover);
             border-color: var(--border-color);
+        }
+
+        .contact-item.has-unread {
+            border-left: 3px solid var(--primary-color);
+            background: linear-gradient(90deg, rgba(102, 126, 234, 0.05), transparent);
         }
 
         .contact-avatar {
@@ -486,6 +517,22 @@
 
         .status-offline {
             background: var(--text-muted);
+        }
+
+        /* 联系人未读徽章 */
+        .contact-unread-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .contacts-stats {
@@ -933,7 +980,7 @@
                 <div class="app-icon">✨</div>
                 <div class="app-title">
                     <h3>催眠APP扩展</h3>
-                    <p class="app-subtitle">动态角色加载版</p>
+                    <p class="app-subtitle">动态角色加载版 v1.1.0</p>
                 </div>
             </div>
             <div class="header-right">
@@ -951,11 +998,11 @@
                 <span class="tab-icon">🗺️</span>
                 <span class="tab-label">地图</span>
             </button>
-            <button class="tab-button" onclick="switchTab('contacts')">
+            <button class="tab-button" onclick="switchTab('contacts')" id="contacts-tab-btn">
                 <span class="tab-icon">📞</span>
                 <span class="tab-label">通讯录</span>
             </button>
-            <button class="tab-button" onclick="switchTab('sms')">
+            <button class="tab-button" onclick="switchTab('sms')" id="sms-tab-btn">
                 <span class="tab-icon">💬</span>
                 <span class="tab-label">短信</span>
             </button>
@@ -1037,6 +1084,10 @@
                         <span class="stat-label">在线</span>
                         <span class="stat-value" id="online-count">0</span>
                     </span>
+                    <span class="stat-item">
+                        <span class="stat-label">未读</span>
+                        <span class="stat-value" id="unread-count">0</span>
+                    </span>
                 </div>
             </div>
 
@@ -1061,9 +1112,14 @@
                 <div class="sms-conversation-container">
                     <div class="sms-conversation-header">
                         <span>短信对话</span>
-                        <button onclick="clearConversation()" style="background:none; border:none; color:var(--text-secondary); font-size:12px; cursor:pointer;">
-                            清空对话
-                        </button>
+                        <div>
+                            <button onclick="loadConversationHistory()" style="background:none; border:none; color:var(--text-secondary); font-size:12px; cursor:pointer; margin-right:10px;">
+                                刷新
+                            </button>
+                            <button onclick="clearConversation()" style="background:none; border:none; color:var(--text-secondary); font-size:12px; cursor:pointer;">
+                                清空
+                            </button>
+                        </div>
                     </div>
                     <div class="sms-conversation" id="sms-conversation">
                         <div class="message received">
@@ -1107,6 +1163,9 @@
         let contacts = [];
         let isResizing = false;
         let lastHeight = 0;
+        let aiResponseObserver = null;
+        let smsHistory = {};
+        let pendingMessages = {};
         
         // ================================
         // 初始化函数
@@ -1143,6 +1202,9 @@
                 // 开始监听AI回复
                 startListeningForAIResponses();
                 
+                // 更新未读指示器
+                updateUnreadIndicators();
+                
             } catch (error) {
                 console.error('初始化角色失败:', error);
                 showError('无法加载角色数据，请检查酒馆助手是否安装');
@@ -1151,7 +1213,7 @@
                 document.getElementById('contacts-list').innerHTML = `
                     <div class="info-placeholder">
                         <div class="placeholder-icon">⚠️</div>
-                        <p>无法加载角色数据</p>
+                        <p>无法加载角色数据: ${error.message}</p>
                         <button class="btn-secondary" onclick="retryLoadContacts()" style="margin-top:10px; padding:8px 16px;">
                             重试
                         </button>
@@ -1214,6 +1276,10 @@
                     if (loadingEl) {
                         loadingEl.style.display = 'none';
                     }
+                    
+                    // 检查是否有未读消息
+                    checkForUnreadMessages();
+                    
                 } else {
                     throw new Error('STInterface.getCharacters 方法不可用');
                 }
@@ -1234,6 +1300,18 @@
                 
                 // 更新统计信息
                 updateContactStats();
+            }
+        }
+        
+        // 检查未读消息
+        function checkForUnreadMessages() {
+            if (window.STInterface && window.STInterface.SMSManager) {
+                contacts.forEach(contact => {
+                    const unreadCount = window.STInterface.SMSManager.getContactUnreadCount(contact.name);
+                    if (unreadCount > 0) {
+                        console.log(`📱 ${contact.name} 有 ${unreadCount} 条未读消息`);
+                    }
+                });
             }
         }
         
@@ -1264,6 +1342,14 @@
                 const statusText = contact.status === 'online' ? '在线' :
                                   contact.status === 'busy' ? '忙碌' : '离线';
                 
+                // 检查是否有未读消息
+                let hasUnread = false;
+                let unreadCount = 0;
+                if (window.STInterface && window.STInterface.SMSManager) {
+                    unreadCount = window.STInterface.SMSManager.getContactUnreadCount(contact.name);
+                    hasUnread = unreadCount > 0;
+                }
+                
                 // 提取角色属性（如果有）
                 const metadataHTML = contact.metadata ? `
                     <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">
@@ -1273,7 +1359,7 @@
                 ` : '';
                 
                 html += `
-                    <div class="contact-item" onclick="startSMSWith('${contact.name}')" data-name="${contact.name.toLowerCase()}">
+                    <div class="contact-item ${hasUnread ? 'has-unread' : ''}" onclick="startSMSWith('${contact.name}')" data-name="${contact.name.toLowerCase()}">
                         <div class="contact-avatar">${contact.avatar}</div>
                         <div class="contact-info">
                             <div class="contact-name">${contact.name}</div>
@@ -1284,6 +1370,7 @@
                             </div>
                             ${metadataHTML}
                         </div>
+                        ${hasUnread ? `<div class="contact-unread-badge">${unreadCount}</div>` : ''}
                     </div>
                 `;
             });
@@ -1296,6 +1383,12 @@
             document.getElementById('contact-count').textContent = contacts.length;
             const onlineCount = contacts.filter(c => c.status === 'online').length;
             document.getElementById('online-count').textContent = onlineCount;
+            
+            // 更新未读总数
+            if (window.STInterface && window.STInterface.SMSManager) {
+                const totalUnread = window.STInterface.SMSManager.getTotalUnreadCount();
+                document.getElementById('unread-count').textContent = totalUnread;
+            }
         }
         
         // 过滤联系人
@@ -1356,6 +1449,15 @@
                 option.value = contact.name;
                 option.textContent = contact.name;
                 option.setAttribute('data-avatar', contact.avatar);
+                
+                // 如果有未读消息，在选项后添加标记
+                if (window.STInterface && window.STInterface.SMSManager) {
+                    const unreadCount = window.STInterface.SMSManager.getContactUnreadCount(contact.name);
+                    if (unreadCount > 0) {
+                        option.textContent += ` (${unreadCount}条未读)`;
+                    }
+                }
+                
                 select.appendChild(option);
             });
         }
@@ -1365,6 +1467,21 @@
             switchTab('sms');
             document.getElementById('sms-contact').value = name;
             document.getElementById('sms-input').focus();
+            
+            // 标记该联系人的未读消息为已读
+            if (window.STInterface && window.STInterface.SMSManager) {
+                const marked = window.STInterface.SMSManager.markAsRead(name);
+                if (marked > 0) {
+                    console.log(`📱 标记了 ${marked} 条消息为已读（${name}）`);
+                    
+                    // 更新UI
+                    updateUnreadIndicators();
+                    loadConversationHistory();
+                }
+            }
+            
+            // 加载对话历史
+            loadConversationHistory();
             
             // 添加系统消息到对话
             addSystemMessage(`已选择联系人: ${name}`);
@@ -1397,18 +1514,49 @@
             sendBtn.innerHTML = '<span class="send-icon">⏳</span>发送中...';
             
             try {
-                // 添加发送的消息到本地对话
+                // 1. 检查是否有未读的AI回复
+                let unreadMessages = [];
+                if (window.STInterface && window.STInterface.SMSManager) {
+                    unreadMessages = window.STInterface.SMSManager.getUnreadMessages(contact);
+                }
+                
+                // 2. 构建发送内容
+                let messageToSend = message;
+                let hasUnread = false;
+                
+                if (unreadMessages.length > 0) {
+                    // 如果有未读消息，将其包含在发送内容中
+                    hasUnread = true;
+                    let unreadText = '【未读消息】\n';
+                    unreadMessages.forEach((msg, index) => {
+                        unreadText += `${contact}（${index + 1}条前）: ${msg.text}\n`;
+                    });
+                    unreadText += `\n【我的新消息】\n${message}`;
+                    messageToSend = unreadText;
+                    
+                    // 标记这些消息为已读
+                    window.STInterface.SMSManager.markAsRead(contact);
+                }
+                
+                // 3. 添加到本地对话显示
                 addSentMessage(message);
                 
-                // 发送到SillyTavern
-                const result = await window.STInterface.sendUserMessage(message, {
+                // 4. 存储到短信管理器（用户发送的消息）
+                if (window.STInterface && window.STInterface.SMSManager) {
+                    window.STInterface.SMSManager.addMessage(contact, message, true);
+                }
+                
+                // 5. 发送到SillyTavern
+                const result = await window.STInterface.sendUserMessage(messageToSend, {
                     contact: contact,
                     type: 'sms',
-                    source: 'hypnosis_app'
+                    source: 'hypnosis_app',
+                    containsUnread: hasUnread,
+                    unreadCount: unreadMessages.length
                 });
                 
                 if (result && result.success) {
-                    console.log('✅ 消息发送成功，方法:', result.method);
+                    console.log('✅ 消息发送成功');
                     
                     // 清空输入框
                     document.getElementById('sms-input').value = '';
@@ -1416,7 +1564,10 @@
                     updateCharCounter();
                     
                     // 添加发送成功提示
-                    addSystemMessage(`消息已发送给 ${contact}`);
+                    addSystemMessage(`消息已发送给 ${contact}${hasUnread ? `（包含${unreadMessages.length}条未读消息）` : ''}`);
+                    
+                    // 更新未读指示器
+                    updateUnreadIndicators();
                     
                 } else {
                     console.error('❌ 消息发送失败');
@@ -1437,9 +1588,10 @@
         }
         
         // 添加发送的消息
-        function addSentMessage(text) {
+        function addSentMessage(text, timestamp = null) {
             const conversation = document.getElementById('sms-conversation');
-            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const time = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 
+                            new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message sent';
@@ -1483,32 +1635,132 @@
         // 开始监听AI回复
         function startListeningForAIResponses() {
             if (window.STInterface && window.STInterface.getCharacterResponse) {
-                window.STInterface.getCharacterResponse((response) => {
+                aiResponseObserver = window.STInterface.getCharacterResponse((response) => {
                     console.log('📥 收到AI回复:', response.substring(0, 100));
                     
-                    // 添加AI回复到短信对话
+                    // 获取当前选中的联系人
                     const contact = document.getElementById('sms-contact').value;
-                    if (contact) {
-                        addReceivedMessage(contact, response);
+                    
+                    // 如果没有选中的联系人，尝试从回复中推断
+                    let targetContact = contact;
+                    if (!targetContact) {
+                        // 尝试从回复中推断联系人
+                        contacts.forEach(c => {
+                            if (response.includes(c.name)) {
+                                targetContact = c.name;
+                            }
+                        });
+                    }
+                    
+                    if (targetContact) {
+                        // 1. 存储到短信管理器（AI发送的消息，标记为未读）
+                        if (window.STInterface && window.STInterface.SMSManager) {
+                            window.STInterface.SMSManager.addMessage(targetContact, response, false);
+                        }
+                        
+                        // 2. 如果当前正在与该联系人对话，添加到界面显示
+                        const currentContact = document.getElementById('sms-contact').value;
+                        if (currentContact === targetContact) {
+                            addReceivedMessage(targetContact, response);
+                        }
+                        
+                        // 3. 更新界面上的未读指示器
+                        updateUnreadIndicators();
+                        
+                        // 4. 如果当前不在短信标签页，显示通知
+                        const smsTab = document.getElementById('sms-tab');
+                        if (!smsTab.classList.contains('active')) {
+                            // 查找联系人的头像
+                            const contactObj = contacts.find(c => c.name === targetContact);
+                            const avatar = contactObj ? contactObj.avatar : '👤';
+                            showNotification(`📱 ${targetContact}: ${response.substring(0, 50)}...`, avatar);
+                        }
                     }
                 });
                 console.log('🔍 开始监听AI回复');
             }
         }
         
+        // 显示通知
+        function showNotification(message, icon = '📱') {
+            try {
+                // 创建通知元素
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 12px 16px;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    z-index: 9999;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    max-width: 300px;
+                    animation: slideIn 0.3s ease;
+                    border-left: 4px solid var(--primary-color);
+                `;
+                
+                notification.innerHTML = `
+                    <div style="font-size:20px;">${icon}</div>
+                    <div>
+                        <div style="font-size:12px; font-weight:600; color:var(--primary-color);">新消息</div>
+                        <div style="font-size:13px; color:var(--text-primary);">${message}</div>
+                    </div>
+                `;
+                
+                document.body.appendChild(notification);
+                
+                // 5秒后移除
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.style.animation = 'slideOut 0.3s ease';
+                        setTimeout(() => {
+                            if (notification.parentNode) {
+                                notification.parentNode.removeChild(notification);
+                            }
+                        }, 300);
+                    }
+                }, 5000);
+                
+                // 添加动画样式
+                if (!document.querySelector('#notification-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'notification-styles';
+                    style.textContent = `
+                        @keyframes slideIn {
+                            from { transform: translateX(100%); opacity: 0; }
+                            to { transform: translateX(0); opacity: 1; }
+                        }
+                        @keyframes slideOut {
+                            from { transform: translateX(0); opacity: 1; }
+                            to { transform: translateX(100%); opacity: 0; }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                
+            } catch (error) {
+                console.warn('显示通知失败:', error);
+            }
+        }
+        
         // 添加收到的消息
-        function addReceivedMessage(sender, text) {
+        function addReceivedMessage(sender, text, timestamp = null, avatar = null, shouldStore = true) {
             const conversation = document.getElementById('sms-conversation');
-            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const time = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 
+                            new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
             // 查找发送者的头像
             const contact = contacts.find(c => c.name === sender);
-            const avatar = contact ? contact.avatar : '👤';
+            const displayAvatar = avatar || (contact ? contact.avatar : '👤');
             
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message received';
             messageDiv.innerHTML = `
-                <div class="message-avatar">${avatar}</div>
+                <div class="message-avatar">${displayAvatar}</div>
                 <div class="message-content">
                     <div class="message-header">
                         <span class="message-sender">${sender}</span>
@@ -1522,9 +1774,57 @@
             conversation.scrollTop = conversation.scrollHeight;
         }
         
+        // 加载对话历史
+        function loadConversationHistory() {
+            const contact = document.getElementById('sms-contact').value;
+            const conversation = document.getElementById('sms-conversation');
+            
+            if (!contact || contact === '') {
+                return;
+            }
+            
+            if (window.STInterface && window.STInterface.SMSManager) {
+                const history = window.STInterface.SMSManager.getConversation(contact, 50);
+                
+                // 清空当前显示（保留系统消息）
+                conversation.innerHTML = '';
+                
+                // 添加历史消息
+                if (history.length === 0) {
+                    // 如果没有历史消息，显示系统消息
+                    addSystemMessage(`开始与 ${contact} 的对话`);
+                } else {
+                    history.forEach(msg => {
+                        if (msg.fromUser) {
+                            addSentMessage(msg.text, msg.timestamp);
+                        } else {
+                            // 查找联系人的头像
+                            const contactObj = contacts.find(c => c.name === contact);
+                            const avatar = contactObj ? contactObj.avatar : '👤';
+                            addReceivedMessage(contact, msg.text, msg.timestamp, avatar, false);
+                        }
+                    });
+                }
+                
+                // 滚动到底部
+                conversation.scrollTop = conversation.scrollHeight;
+            }
+        }
+        
         // 清空对话
         function clearConversation() {
-            if (confirm('确定要清空当前对话吗？')) {
+            const contact = document.getElementById('sms-contact').value;
+            
+            if (!contact || contact === '') {
+                addSystemMessage('请先选择联系人');
+                return;
+            }
+            
+            if (confirm(`确定要清空与 ${contact} 的对话历史吗？`)) {
+                if (window.STInterface && window.STInterface.SMSManager) {
+                    window.STInterface.SMSManager.clearConversation(contact);
+                }
+                
                 const conversation = document.getElementById('sms-conversation');
                 conversation.innerHTML = `
                     <div class="message received">
@@ -1538,7 +1838,82 @@
                         </div>
                     </div>
                 `;
+                
+                addSystemMessage(`已清空与 ${contact} 的对话历史`);
             }
+        }
+        
+        // 更新未读指示器
+        function updateUnreadIndicators() {
+            if (window.STInterface && window.STInterface.SMSManager) {
+                const totalUnread = window.STInterface.SMSManager.getTotalUnreadCount();
+                
+                // 更新短信标签的徽章
+                const smsTabBtn = document.getElementById('sms-tab-btn');
+                updateTabBadge(smsTabBtn, totalUnread);
+                
+                // 更新通讯录标签的徽章
+                const contactsTabBtn = document.getElementById('contacts-tab-btn');
+                updateTabBadge(contactsTabBtn, totalUnread);
+                
+                // 更新联系人列表中的未读徽章
+                updateContactsUnreadBadges();
+                
+                // 更新统计信息
+                updateContactStats();
+            }
+        }
+        
+        // 更新标签徽章
+        function updateTabBadge(tabElement, count) {
+            if (!tabElement) return;
+            
+            const existingBadge = tabElement.querySelector('.unread-badge');
+            
+            if (count > 0) {
+                if (existingBadge) {
+                    existingBadge.textContent = count;
+                } else {
+                    const badge = document.createElement('span');
+                    badge.className = 'unread-badge';
+                    badge.textContent = count;
+                    tabElement.style.position = 'relative';
+                    tabElement.appendChild(badge);
+                }
+            } else if (existingBadge) {
+                existingBadge.remove();
+            }
+        }
+        
+        // 更新联系人未读徽章
+        function updateContactsUnreadBadges() {
+            if (!window.STInterface || !window.STInterface.SMSManager) return;
+            
+            const contactItems = document.querySelectorAll('.contact-item');
+            contactItems.forEach(item => {
+                const name = item.getAttribute('data-name');
+                if (name) {
+                    const unreadCount = window.STInterface.SMSManager.getContactUnreadCount(name);
+                    const existingBadge = item.querySelector('.contact-unread-badge');
+                    
+                    if (unreadCount > 0) {
+                        item.classList.add('has-unread');
+                        if (existingBadge) {
+                            existingBadge.textContent = unreadCount;
+                        } else {
+                            const badge = document.createElement('div');
+                            badge.className = 'contact-unread-badge';
+                            badge.textContent = unreadCount;
+                            item.appendChild(badge);
+                        }
+                    } else {
+                        item.classList.remove('has-unread');
+                        if (existingBadge) {
+                            existingBadge.remove();
+                        }
+                    }
+                }
+            });
         }
         
         // ================================
@@ -1561,7 +1936,11 @@
         
         function travelToLocation(location) {
             if (window.STInterface && window.STInterface.sendUserMessage) {
-                window.STInterface.sendUserMessage(`（移动到${location}）`);
+                window.STInterface.sendUserMessage(`（移动到${location}）`, {
+                    type: 'travel',
+                    location: location
+                });
+                addSystemMessage(`已移动到 ${location}`);
             } else {
                 console.log('前往:', location);
             }
@@ -1609,6 +1988,12 @@
             // 如果是通讯录标签，确保联系人已加载
             if (tabName === 'contacts' && contacts.length === 0) {
                 loadContacts();
+            }
+            
+            // 如果是短信标签，加载历史记录
+            if (tabName === 'sms') {
+                loadConversationHistory();
+                updateUnreadIndicators();
             }
         }
         
@@ -1694,6 +2079,22 @@
                     }
                 }
             });
+            
+            // 联系人选择变化时加载历史记录
+            const smsContactSelect = document.getElementById('sms-contact');
+            if (smsContactSelect) {
+                smsContactSelect.addEventListener('change', function() {
+                    const contact = this.value;
+                    if (contact) {
+                        // 标记该联系人的未读消息为已读
+                        if (window.STInterface && window.STInterface.SMSManager) {
+                            window.STInterface.SMSManager.markAsRead(contact);
+                            updateUnreadIndicators();
+                        }
+                        loadConversationHistory();
+                    }
+                });
+            }
         }
         
         function updateCharCounter() {
@@ -1736,7 +2137,34 @@
                 console.dir(window.STInterface.runDiagnostics());
             }
             
+            if (window.STInterface && window.STInterface.SMSManager) {
+                console.log('短信存储:', {
+                    contacts: Object.keys(window.STInterface.SMSManager.storage).length,
+                    totalUnread: window.STInterface.SMSManager.getTotalUnreadCount()
+                });
+            }
+            
             console.groupEnd();
+        };
+        
+        // 导出短信数据
+        window.exportSMSData = function() {
+            if (window.STInterface && window.STInterface.exportSMSData) {
+                window.STInterface.exportSMSData();
+            } else {
+                alert('导出功能不可用');
+            }
+        };
+        
+        // 重置短信数据
+        window.resetSMSData = function() {
+            if (window.STInterface && window.STInterface.resetSMSStorage) {
+                window.STInterface.resetSMSStorage();
+                updateUnreadIndicators();
+                loadContacts();
+            } else {
+                alert('重置功能不可用');
+            }
         };
     </script>
 </body>
