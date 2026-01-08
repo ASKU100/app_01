@@ -1,1521 +1,1170 @@
-<!-- 删除所有原来的内容，替换为以下代码 -->
-<div id="hypnosis-extension">
-  <!-- 头部 -->
-  <div class="extension-header">
-    <div class="header-left">
-      <div class="app-icon">✨</div>
-      <div class="app-title">
-        <h3>催眠APP扩展</h3>
-        <p class="app-subtitle">增强功能面板</p>
-      </div>
-    </div>
-    <div class="header-right">
-      <button class="close-btn" onclick="closeExtension()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 6L6 18M6 6l12 12"/>
-        </svg>
-      </button>
-    </div>
-  </div>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>催眠APP扩展 - ST优化版</title>
+    <style>
+        /* ====== 针对SillyTavern的响应式规则 ====== */
+        :root {
+            --primary-color: #667eea;
+            --primary-dark: #5a67d8;
+            --secondary-color: #764ba2;
+            --success-color: #48bb78;
+            --warning-color: #ed8936;
+            --danger-color: #f56565;
+            --info-color: #4299e1;
+            
+            --bg-primary: #f7fafc;
+            --bg-secondary: #edf2f7;
+            --bg-card: #ffffff;
+            --bg-hover: #f1f5f9;
+            
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --text-muted: #a0aec0;
+            
+            --border-color: #e2e8f0;
+            --border-radius: 12px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            
+            --transition-fast: 150ms ease;
+            --transition-normal: 250ms ease;
+            
+            /* 响应式变量 */
+            --st-safe-area-top: 50px;
+            --st-safe-area-bottom: 70px;
+            --st-max-height: calc(100vh - 120px);
+            --st-min-height: 500px;
+        }
 
-  <!-- 标签页 -->
-  <div class="extension-tabs">
-    <button class="tab-button active" onclick="switchTab('map')">
-      <span class="tab-icon">🗺️</span>
-      <span class="tab-label">地图</span>
-    </button>
-    <button class="tab-button" onclick="switchTab('contacts')">
-      <span class="tab-icon">📞</span>
-      <span class="tab-label">通讯录</span>
-    </button>
-    <button class="tab-button" onclick="switchTab('sms')">
-      <span class="tab-icon">💬</span>
-      <span class="tab-label">短信</span>
-    </button>
-  </div>
+        /* 基础重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
 
-  <!-- 地图标签页 -->
-  <div id="map-tab" class="tab-content active">
-    <div class="tab-header">
-      <h4 class="tab-title">私立斋明学园地图</h4>
-      <p class="tab-description">探索校园各个地点，快速移动</p>
-    </div>
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* 主容器 - 关键响应式设置 */
+        #hypnosis-extension {
+            width: 100%;
+            height: 100%;
+            min-height: var(--st-min-height);
+            max-height: var(--st-max-height);
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg), 0 20px 80px rgba(102, 126, 234, 0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            border: 1px solid var(--border-color);
+            animation: panelSlideIn 0.3s ease-out;
+        }
+
+        @keyframes panelSlideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* ====== 头部样式 ====== */
+        .extension-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            padding: 16px 20px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .app-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .app-title h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .app-subtitle {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+
+        .close-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            color: white;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* ====== 标签页样式 ====== */
+        .extension-tabs {
+            display: flex;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 16px 0;
+            flex-shrink: 0;
+        }
+
+        .tab-button {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 12px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 500;
+            position: relative;
+            transition: all var(--transition-fast);
+            border-radius: 8px 8px 0 0;
+            min-height: 44px;
+        }
+
+        .tab-button:hover {
+            color: var(--primary-color);
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .tab-button.active {
+            color: var(--primary-color);
+            background: var(--bg-card);
+        }
+
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 8px;
+            right: 8px;
+            height: 3px;
+            background: var(--primary-color);
+            border-radius: 2px 2px 0 0;
+        }
+
+        .tab-icon {
+            font-size: 16px;
+        }
+
+        .tab-label {
+            font-size: 11px;
+        }
+
+        /* ====== 标签页内容容器 ====== */
+        .tab-content-container {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .tab-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .tab-content.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ====== 地图标签页 ====== */
+        .map-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-height: 0;
+        }
+
+        .tab-header {
+            margin-bottom: 8px;
+        }
+
+        .tab-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .tab-description {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .map-preview {
+            flex: 1;
+            min-height: 200px;
+            background: linear-gradient(135deg, #e9f4ff 0%, #f0f7ff 100%);
+            border-radius: var(--border-radius);
+            border: 2px solid #dbeafe;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-grid {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .map-marker {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .marker-dot {
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 3px solid white;
+            box-shadow: var(--shadow-md);
+            transition: all var(--transition-fast);
+        }
+
+        .map-marker:hover .marker-dot {
+            transform: translate(-50%, -50%) scale(1.3);
+            background: var(--danger-color);
+        }
+
+        .location-info {
+            min-height: 80px;
+            background: var(--bg-primary);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+        }
+
+        .info-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .placeholder-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+            opacity: 0.6;
+        }
+
+        .map-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        /* ====== 按钮样式 ====== */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all var(--transition-fast);
+            flex: 1;
+            font-size: 13px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 10px 16px;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all var(--transition-fast);
+            flex: 1;
+            font-size: 13px;
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+            border-color: var(--primary-color);
+        }
+
+        .btn-icon {
+            font-size: 14px;
+        }
+
+        /* ====== 通讯录标签页 ====== */
+        .search-box {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 14px;
+            z-index: 2;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 14px 12px 38px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 13px;
+            transition: all var(--transition-fast);
+            background: var(--bg-card);
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .contacts-list {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            margin-bottom: 8px;
+            min-height: 44px;
+        }
+
+        .contact-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .contact-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .contact-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .contact-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+            font-size: 13px;
+        }
+
+        .contact-phone {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .contact-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 20px;
+            background: var(--bg-secondary);
+            width: fit-content;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .status-online {
+            background: var(--success-color);
+        }
+
+        .status-offline {
+            background: var(--text-muted);
+        }
+
+        .contacts-stats {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        /* ====== 短信标签页 ====== */
+        .sms-recipient {
+            margin-bottom: 16px;
+        }
+
+        .recipient-select {
+            position: relative;
+            margin-bottom: 8px;
+        }
+
+        .select-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            z-index: 2;
+        }
+
+        .recipient-select select {
+            width: 100%;
+            padding: 12px 14px 12px 38px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 13px;
+            background: var(--bg-card);
+            appearance: none;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .recipient-select select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .select-arrow {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+            font-size: 12px;
+        }
+
+        .sms-conversation {
+            flex: 1;
+            min-height: 200px;
+            overflow-y: auto;
+            background: var(--bg-primary);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .message {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .message.received .message-avatar {
+            background: linear-gradient(135deg, #edf2f7, #e2e8f0);
+        }
+
+        .message.sent .message-avatar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .message-content {
+            max-width: 75%;
+            background: white;
+            border-radius: 12px;
+            padding: 10px 14px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+        }
+
+        .message.sent .message-content {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            margin-left: auto;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 10px;
+        }
+
+        .message.sent .message-header {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .message-text {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .sms-input-area {
+            border-top: 1px solid var(--border-color);
+            padding-top: 16px;
+        }
+
+        .sms-input-area textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 13px;
+            resize: vertical;
+            transition: all var(--transition-fast);
+            background: var(--bg-card);
+            min-height: 80px;
+            max-height: 120px;
+        }
+
+        .sms-input-area textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        .char-counter {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all var(--transition-fast);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            font-size: 13px;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        /* ====== 滚动条样式 ====== */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* ====== 响应式媒体查询 ====== */
+        @media (max-height: 700px) {
+            :root {
+                --st-max-height: calc(100vh - 100px);
+                --st-min-height: 450px;
+            }
+            
+            .tab-content {
+                padding: 16px;
+            }
+            
+            .map-preview {
+                min-height: 180px;
+            }
+            
+            .sms-conversation {
+                min-height: 180px;
+            }
+        }
+
+        @media (max-height: 550px) {
+            :root {
+                --st-max-height: calc(100vh - 80px);
+                --st-min-height: 380px;
+            }
+            
+            .extension-header {
+                padding: 12px 16px;
+            }
+            
+            .extension-tabs {
+                padding: 6px 12px 0;
+            }
+            
+            .tab-button {
+                padding: 8px 6px;
+                font-size: 11px;
+            }
+            
+            .tab-content {
+                padding: 12px;
+            }
+            
+            .map-preview {
+                min-height: 150px;
+            }
+            
+            .sms-conversation {
+                min-height: 150px;
+                padding: 12px;
+            }
+            
+            .message {
+                margin-bottom: 12px;
+            }
+        }
+
+        @media (max-height: 450px) {
+            :root {
+                --st-min-height: 300px;
+            }
+            
+            .extension-header {
+                padding: 8px 12px;
+            }
+            
+            .app-icon {
+                width: 32px;
+                height: 32px;
+                font-size: 16px;
+            }
+            
+            .extension-tabs {
+                padding: 4px 8px 0;
+            }
+            
+            .tab-button {
+                padding: 6px 4px;
+                font-size: 10px;
+                min-height: 36px;
+            }
+            
+            .tab-icon {
+                font-size: 14px;
+            }
+            
+            .map-preview {
+                min-height: 120px;
+            }
+            
+            .sms-conversation {
+                min-height: 120px;
+                padding: 8px;
+            }
+            
+            .sms-input-area textarea {
+                min-height: 60px;
+                padding: 8px;
+            }
+        }
+
+        /* 触摸设备优化 */
+        @media (hover: none) and (pointer: coarse) {
+            .tab-button,
+            .contact-item,
+            button,
+            .send-btn {
+                min-height: 44px;
+            }
+            
+            .search-box input,
+            .recipient-select select,
+            .sms-input-area textarea {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 完整的HTML结构（这里应该包含您原有的所有HTML内容） -->
+    <!-- 注意：不要包含外层的<html><head><body>标签，因为这是给iframe使用的 -->
     
-    <div class="map-container">
-      <div class="map-preview">
-        <div class="map-grid">
-          <!-- 地图标记 -->
-          <div class="map-marker" style="top: 30%; left: 40%;" data-location="教学楼" data-description="二年级教室、图书室、电脑室">
-            <div class="marker-dot"></div>
-            <div class="marker-tooltip">🏫 教学楼</div>
-          </div>
-          <div class="map-marker" style="top: 60%; left: 20%;" data-location="体育馆" data-description="运动场地，更衣室和淋浴间">
-            <div class="marker-dot"></div>
-            <div class="marker-tooltip">⚽ 体育馆</div>
-          </div>
-          <div class="map-marker" style="top: 40%; left: 70%;" data-location="旧校舍" data-description="午休避难所，安静少人">
-            <div class="marker-dot"></div>
-            <div class="marker-tooltip">🏚️ 旧校舍</div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="location-info" id="location-info">
-        <div class="info-placeholder">
-          <div class="placeholder-icon">📍</div>
-          <p>点击地图上的标记查看地点详情</p>
-        </div>
-      </div>
-    </div>
-    
-    <div class="map-actions">
-      <button class="btn-primary" onclick="refreshMap()">
-        <span class="btn-icon">🔄</span>
-        刷新地图
-      </button>
-      <button class="btn-secondary" onclick="showAllLocations()">
-        <span class="btn-icon">📋</span>
-        所有地点
-      </button>
-    </div>
-  </div>
-
-  <!-- 通讯录标签页 -->
-  <div id="contacts-tab" class="tab-content">
-    <div class="tab-header">
-      <h4 class="tab-title">通讯录</h4>
-      <p class="tab-description">联系校园中的角色</p>
-    </div>
-    
-    <div class="search-box">
-      <div class="search-icon">🔍</div>
-      <input type="text" id="contact-search" placeholder="搜索联系人..." oninput="filterContacts()">
-      <button class="search-clear" onclick="clearSearch()">×</button>
-    </div>
-    
-    <div class="contacts-list" id="contacts-list">
-      <!-- 联系人列表将动态生成 -->
-    </div>
-    
-    <div class="contacts-stats">
-      <span class="stat-item">
-        <span class="stat-label">联系人</span>
-        <span class="stat-value" id="contact-count">4</span>
-      </span>
-      <span class="stat-item">
-        <span class="stat-label">在线</span>
-        <span class="stat-value" id="online-count">2</span>
-      </span>
-    </div>
-  </div>
-
-  <!-- 短信标签页 -->
-  <div id="sms-tab" class="tab-content">
-    <div class="tab-header">
-      <h4 class="tab-title">短信</h4>
-      <p class="tab-description">与角色发送消息</p>
-    </div>
-    
-    <div class="sms-recipient">
-      <div class="recipient-select">
-        <div class="select-icon">👤</div>
-        <select id="sms-contact">
-          <option value="">选择联系人</option>
-          <option value="西园寺爱丽莎">西园寺爱丽莎</option>
-          <option value="月咏深雪">月咏深雪</option>
-          <option value="犬冢夏美">犬冢夏美</option>
-          <option value="阿宅君">阿宅君</option>
-        </select>
-        <div class="select-arrow">▼</div>
-      </div>
-      <div class="recipient-info" id="recipient-info">
-        <span class="recipient-status offline">离线</span>
-      </div>
-    </div>
-    
-    <div class="sms-conversation" id="sms-conversation">
-      <div class="message-date">今天</div>
-      <div class="message received">
-        <div class="message-avatar">🤖</div>
-        <div class="message-content">
-          <div class="message-header">
-            <span class="message-sender">系统</span>
-            <span class="message-time">14:30</span>
-          </div>
-          <div class="message-text">
-            短信功能已就绪。您可以向角色发送短信，他们会回复您。
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="sms-input-area">
-      <div class="input-tools">
-        <button class="input-tool" onclick="addEmoji()">😊</button>
-        <button class="input-tool" onclick="attachFile()">📎</button>
-      </div>
-      <textarea id="sms-input" placeholder="输入消息..." rows="3"></textarea>
-      <div class="input-actions">
-        <div class="char-counter">
-          <span id="char-count">0</span>/500
-        </div>
-        <button class="send-btn" onclick="sendSMS()">
-          <span class="send-icon">✈️</span>
-          发送
-        </button>
-      </div>
-    </div>
-    
-    <div class="sms-tips">
-      <div class="tip-icon">💡</div>
-      <p>发送短信将触发角色在SillyTavern中回复</p>
-    </div>
-  </div>
-</div>
-
-<style>
-  /* ====== 全局样式 ====== */
-  :root {
-    --primary-color: #667eea;
-    --primary-dark: #5a67d8;
-    --secondary-color: #764ba2;
-    --success-color: #48bb78;
-    --warning-color: #ed8936;
-    --danger-color: #f56565;
-    --info-color: #4299e1;
-    
-    --bg-primary: #f7fafc;
-    --bg-secondary: #edf2f7;
-    --bg-card: #ffffff;
-    --bg-hover: #f1f5f9;
-    
-    --text-primary: #2d3748;
-    --text-secondary: #718096;
-    --text-muted: #a0aec0;
-    
-    --border-color: #e2e8f0;
-    --border-radius: 12px;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    
-    --transition-fast: 150ms ease;
-    --transition-normal: 250ms ease;
-    --transition-slow: 350ms ease;
-  }
-
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  }
-
-  #hypnosis-extension {
-    width: 420px;
-    height: 640px;
-    background: var(--bg-card);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-lg), 0 20px 80px rgba(102, 126, 234, 0.15);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    border: 1px solid var(--border-color);
-  }
-
-  /* ====== 头部样式 ====== */
-  .extension-header {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    padding: 18px 24px;
-    color: white;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .extension-header::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 200px;
-    height: 200px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-  }
-
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    position: relative;
-    z-index: 2;
-  }
-
-  .app-icon {
-    width: 44px;
-    height: 44px;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-  }
-
-  .app-title h3 {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 2px;
-    letter-spacing: 0.3px;
-  }
-
-  .app-subtitle {
-    font-size: 12px;
-    opacity: 0.9;
-    font-weight: 400;
-  }
-
-  .close-btn {
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    color: white;
-    position: relative;
-    z-index: 2;
-  }
-
-  .close-btn:hover {
-    background: rgba(255, 255, 255, 0.25);
-    transform: scale(1.05);
-  }
-
-  /* ====== 标签页样式 ====== */
-  .extension-tabs {
-    display: flex;
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border-color);
-    padding: 8px 16px 0;
-  }
-
-  .tab-button {
-    flex: 1;
-    background: none;
-    border: none;
-    padding: 14px 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    font-size: 13px;
-    font-weight: 500;
-    position: relative;
-    transition: all var(--transition-fast);
-    border-radius: 8px 8px 0 0;
-  }
-
-  .tab-button:hover {
-    color: var(--primary-color);
-    background: rgba(102, 126, 234, 0.05);
-  }
-
-  .tab-button.active {
-    color: var(--primary-color);
-    background: var(--bg-card);
-  }
-
-  .tab-button.active::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 8px;
-    right: 8px;
-    height: 3px;
-    background: var(--primary-color);
-    border-radius: 2px 2px 0 0;
-  }
-
-  .tab-icon {
-    font-size: 18px;
-    line-height: 1;
-  }
-
-  .tab-label {
-    font-size: 12px;
-    letter-spacing: 0.3px;
-  }
-
-  /* ====== 标签页内容样式 ====== */
-  .tab-content {
-    flex: 1;
-    display: none;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .tab-content.active {
-    display: flex;
-    animation: fadeIn 0.3s ease;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .tab-header {
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .tab-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 4px;
-  }
-
-  .tab-description {
-    font-size: 13px;
-    color: var(--text-secondary);
-  }
-
-  /* ====== 地图标签页样式 ====== */
-  .map-container {
-    flex: 1;
-    padding: 20px 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  .map-preview {
-    flex: 1;
-    background: linear-gradient(135deg, #e9f4ff 0%, #f0f7ff 100%);
-    border-radius: var(--border-radius);
-    border: 2px solid #dbeafe;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .map-grid {
-    width: 100%;
-    height: 100%;
-    background-image: 
-      linear-gradient(rgba(147, 197, 253, 0.2) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(147, 197, 253, 0.2) 1px, transparent 1px);
-    background-size: 30px 30px;
-    position: relative;
-  }
-
-  .map-marker {
-    position: absolute;
-    width: 40px;
-    height: 40px;
-    transform: translate(-50%, -50%);
-    cursor: pointer;
-    z-index: 2;
-  }
-
-  .marker-dot {
-    width: 20px;
-    height: 20px;
-    background: var(--primary-color);
-    border-radius: 50%;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border: 3px solid white;
-    box-shadow: var(--shadow-md);
-    transition: all var(--transition-fast);
-  }
-
-  .map-marker:hover .marker-dot {
-    transform: translate(-50%, -50%) scale(1.3);
-    background: var(--danger-color);
-  }
-
-  .marker-tooltip {
-    position: absolute;
-    top: -40px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: white;
-    padding: 8px 12px;
-    border-radius: 8px;
-    box-shadow: var(--shadow-md);
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: all var(--transition-fast);
-    border: 1px solid var(--border-color);
-    z-index: 10;
-  }
-
-  .map-marker:hover .marker-tooltip {
-    opacity: 1;
-    top: -45px;
-  }
-
-  .location-info {
-    min-height: 100px;
-    background: var(--bg-primary);
-    border-radius: var(--border-radius);
-    border: 1px solid var(--border-color);
-    padding: 16px;
-  }
-
-  .info-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: var(--text-muted);
-    text-align: center;
-  }
-
-  .placeholder-icon {
-    font-size: 32px;
-    margin-bottom: 12px;
-    opacity: 0.6;
-  }
-
-  .map-actions {
-    display: flex;
-    gap: 12px;
-  }
-
-  /* ====== 通讯录标签页样式 ====== */
-  .search-box {
-    position: relative;
-    margin: 20px 24px;
-  }
-
-  .search-icon {
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-    font-size: 14px;
-    z-index: 2;
-  }
-
-  .search-box input {
-    width: 100%;
-    padding: 14px 16px 14px 42px;
-    border: 2px solid var(--border-color);
-    border-radius: var(--border-radius);
-    font-size: 14px;
-    transition: all var(--transition-fast);
-    background: var(--bg-card);
-  }
-
-  .search-box input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  }
-
-  .search-clear {
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 20px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: all var(--transition-fast);
-  }
-
-  .search-clear:hover {
-    background: var(--bg-hover);
-    color: var(--danger-color);
-  }
-
-  .contacts-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0 24px;
-  }
-
-  .contact-item {
-    display: flex;
-    align-items: center;
-    padding: 14px;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    margin-bottom: 8px;
-  }
-
-  .contact-item:hover {
-    background: var(--bg-hover);
-    transform: translateX(4px);
-  }
-
-  .contact-avatar {
-    width: 44px;
-    height: 44px;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    color: white;
-    margin-right: 14px;
-    flex-shrink: 0;
-  }
-
-  .contact-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .contact-name {
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 2px;
-    font-size: 14px;
-  }
-
-  .contact-phone {
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-
-  .contact-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    font-weight: 500;
-    padding: 4px 10px;
-    border-radius: 20px;
-    background: var(--bg-secondary);
-    width: fit-content;
-  }
-
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  }
-
-  .status-online {
-    background: var(--success-color);
-  }
-
-  .status-offline {
-    background: var(--text-muted);
-  }
-
-  .status-busy {
-    background: var(--warning-color);
-  }
-
-  .contacts-stats {
-    display: flex;
-    justify-content: space-between;
-    padding: 16px 24px;
-    border-top: 1px solid var(--border-color);
-    background: var(--bg-primary);
-  }
-
-  .stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .stat-label {
-    font-size: 11px;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .stat-value {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--primary-color);
-  }
-
-  /* ====== 短信标签页样式 ====== */
-  .sms-recipient {
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .recipient-select {
-    position: relative;
-    margin-bottom: 8px;
-  }
-
-  .select-icon {
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-    z-index: 2;
-  }
-
-  .recipient-select select {
-    width: 100%;
-    padding: 14px 16px 14px 42px;
-    border: 2px solid var(--border-color);
-    border-radius: var(--border-radius);
-    font-size: 14px;
-    background: var(--bg-card);
-    appearance: none;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-  }
-
-  .recipient-select select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  }
-
-  .select-arrow {
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-    pointer-events: none;
-    font-size: 12px;
-  }
-
-  .recipient-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-  }
-
-  .recipient-status {
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.3px;
-  }
-
-  .online {
-    background: rgba(72, 187, 120, 0.1);
-    color: var(--success-color);
-  }
-
-  .offline {
-    background: rgba(160, 174, 192, 0.1);
-    color: var(--text-muted);
-  }
-
-  .sms-conversation {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px 24px;
-    background: var(--bg-primary);
-  }
-
-  .message-date {
-    text-align: center;
-    font-size: 11px;
-    color: var(--text-muted);
-    padding: 8px;
-    position: relative;
-    margin: 16px 0;
-  }
-
-  .message-date::before,
-  .message-date::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 30%;
-    height: 1px;
-    background: var(--border-color);
-  }
-
-  .message-date::before {
-    left: 0;
-  }
-
-  .message-date::after {
-    right: 0;
-  }
-
-  .message {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-    animation: slideIn 0.3s ease;
-  }
-
-  .message.received {
-    flex-direction: row;
-  }
-
-  .message.sent {
-    flex-direction: row-reverse;
-  }
-
-  .message-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    flex-shrink: 0;
-  }
-
-  .message.received .message-avatar {
-    background: linear-gradient(135deg, #edf2f7, #e2e8f0);
-  }
-
-  .message.sent .message-avatar {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    color: white;
-  }
-
-  .message-content {
-    max-width: 70%;
-    background: white;
-    border-radius: 18px;
-    padding: 12px 16px;
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border-color);
-  }
-
-  .message.received .message-content {
-    border-top-left-radius: 4px;
-  }
-
-  .message.sent .message-content {
-    border-top-right-radius: 4px;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    color: white;
-    border: none;
-  }
-
-  .message-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 4px;
-    font-size: 11px;
-  }
-
-  .message.sent .message-header {
-    color: rgba(255, 255, 255, 0.8);
-  }
-
-  .message-text {
-    font-size: 13px;
-    line-height: 1.5;
-  }
-
-  .sms-input-area {
-    border-top: 1px solid var(--border-color);
-    padding: 16px 24px;
-    background: var(--bg-card);
-  }
-
-  .input-tools {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-
-  .input-tool {
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 6px 10px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all var(--transition-fast);
-  }
-
-  .input-tool:hover {
-    background: var(--bg-hover);
-    transform: scale(1.1);
-  }
-
-  .sms-input-area textarea {
-    width: 100%;
-    padding: 12px;
-    border: 2px solid var(--border-color);
-    border-radius: var(--border-radius);
-    font-size: 14px;
-    resize: none;
-    transition: all var(--transition-fast);
-    background: var(--bg-card);
-  }
-
-  .sms-input-area textarea:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  }
-
-  .input-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 12px;
-  }
-
-  .char-counter {
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-
-  .send-btn {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    color: white;
-    border: none;
-    padding: 10px 24px;
-    border-radius: var(--border-radius);
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all var(--transition-fast);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  }
-
-  .send-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
-  }
-
-  .send-btn:active {
-    transform: translateY(0);
-  }
-
-  .sms-tips {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 24px;
-    background: rgba(102, 126, 234, 0.05);
-    border-top: 1px solid var(--border-color);
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-
-  .tip-icon {
-    font-size: 14px;
-  }
-
-  /* ====== 按钮样式 ====== */
-  .btn-primary {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    color: white;
-    border: none;
-    padding: 12px 20px;
-    border-radius: var(--border-radius);
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all var(--transition-fast);
-    flex: 1;
-  }
-
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
-  }
-
-  .btn-secondary {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-    padding: 12px 20px;
-    border-radius: var(--border-radius);
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all var(--transition-fast);
-    flex: 1;
-  }
-
-  .btn-secondary:hover {
-    background: var(--bg-hover);
-    border-color: var(--primary-color);
-  }
-
-  .btn-icon {
-    font-size: 14px;
-  }
-
-  /* ====== 滚动条样式 ====== */
-  ::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 3px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
-  }
-
-  /* ====== 响应式调整 ====== */
-  @media (max-height: 700px) {
-    #hypnosis-extension {
-      height: 580px;
-    }
-    
-    .tab-header {
-      padding: 16px 20px 12px;
-    }
-    
-    .map-container,
-    .sms-conversation {
-      padding: 16px 20px;
-    }
-  }
-
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes pulse {
-    0%, 100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.05);
-    }
-  }
-</style>
-
-<script>
-  // ====== 全局变量 ======
-  let currentTab = 'map';
-  let contacts = [
-    {
-      name: '西园寺爱丽莎',
-      phone: '090-XXXX-0001',
-      status: 'online',
-      avatar: '👑',
-      color: '#667eea',
-      lastSeen: '刚刚在线'
-    },
-    {
-      name: '月咏深雪',
-      phone: '090-XXXX-0002',
-      status: 'online',
-      avatar: '❄️',
-      color: '#4299e1',
-      lastSeen: '2分钟前'
-    },
-    {
-      name: '犬冢夏美',
-      phone: '090-XXXX-0003',
-      status: 'busy',
-      avatar: '🐕',
-      color: '#ed8936',
-      lastSeen: '训练中'
-    },
-    {
-      name: '阿宅君',
-      phone: '090-XXXX-0004',
-      status: 'offline',
-      avatar: '👓',
-      color: '#718096',
-      lastSeen: '昨天 22:30'
-    }
-  ];
-
-  // ====== 初始化函数 ======
-  document.addEventListener('DOMContentLoaded', function() {
-    // 初始化标签页
-    initTabs();
-    
-    // 初始化通讯录
-    initContacts();
-    
-    // 初始化短信功能
-    initSMS();
-    
-    // 初始化地图点击事件
-    initMapMarkers();
-    
-    console.log('扩展面板已初始化');
-  });
-
-  // ====== 标签页功能 ======
-  function initTabs() {
-    // 激活第一个标签页
-    switchTab('map');
-  }
-
-  function switchTab(tabName) {
-    // 移除所有激活状态
-    document.querySelectorAll('.tab-button').forEach(btn => {
-      btn.classList.remove('active');
-    });
-    
-    document.querySelectorAll('.tab-content').forEach(content => {
-      content.classList.remove('active');
-    });
-    
-    // 激活当前标签
-    const tabBtn = document.querySelector(`.tab-button[onclick*="${tabName}"]`);
-    if (tabBtn) {
-      tabBtn.classList.add('active');
-    }
-    
-    const tabContent = document.getElementById(`${tabName}-tab`);
-    if (tabContent) {
-      tabContent.classList.add('active');
-    }
-    
-    currentTab = tabName;
-    
-    // 标签页切换后的额外操作
-    if (tabName === 'contacts') {
-      renderContacts();
-    } else if (tabName === 'sms') {
-      updateSMSContactInfo();
-    }
-  }
-
-  // ====== 地图功能 ======
-  function initMapMarkers() {
-    document.querySelectorAll('.map-marker').forEach(marker => {
-      marker.addEventListener('click', function() {
-        const location = this.getAttribute('data-location');
-        const description = this.getAttribute('data-description');
-        showLocationInfo(location, description);
-        
-        // 添加点击动画
-        const dot = this.querySelector('.marker-dot');
-        dot.style.animation = 'pulse 0.3s ease';
-        setTimeout(() => {
-          dot.style.animation = '';
-        }, 300);
-      });
-    });
-  }
-
-  function showLocationInfo(name, description) {
-    const infoDiv = document.getElementById('location-info');
-    infoDiv.innerHTML = `
-      <div class="location-details">
-        <div class="location-header">
-          <span class="location-icon">📍</span>
-          <h5 style="color: var(--primary-color); font-size: 15px;">${name}</h5>
-        </div>
-        <p style="font-size: 13px; color: var(--text-secondary); margin: 8px 0;">${description}</p>
-        <div class="location-actions" style="display: flex; gap: 10px;">
-          <button class="btn-primary" style="padding: 8px 16px; font-size: 12px;" 
-                  onclick="travelToLocation('${name}')">
-            <span class="btn-icon">🚶</span>
-            前往此处
-          </button>
-          <button class="btn-secondary" style="padding: 8px 16px; font-size: 12px;"
-                  onclick="addToFavorites('${name}')">
-            <span class="btn-icon">⭐</span>
-            收藏
-          </button>
-        </div>
-      </div>
-    `;
-  }
-
-  function travelToLocation(locationName) {
-    if (window.STInterface && window.STInterface.sendUserMessage) {
-      window.STInterface.sendUserMessage(`（移动到${locationName}）`);
-      showNotification(`已前往${locationName}`, 'success');
-    } else {
-      console.log(`玩家移动到: ${locationName}`);
-      showNotification(`已记录位置: ${locationName}`, 'info');
-    }
-  }
-
-  function refreshMap() {
-    showNotification('地图已刷新', 'info');
-  }
-
-  function showAllLocations() {
-    const locations = [
-      { name: '教学楼', description: '二年级教室、图书室、电脑室' },
-      { name: '体育馆', description: '运动场地，更衣室和淋浴间' },
-      { name: '旧校舍', description: '午休避难所，安静少人' },
-      { name: '食堂', description: '午餐和小卖部所在地' },
-      { name: '图书馆', description: '安静的学习场所' }
-    ];
-    
-    let html = '<div style="max-height: 200px; overflow-y: auto;">';
-    locations.forEach(loc => {
-      html += `
-        <div style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-          <div style="font-weight: 600; color: var(--primary-color);">${loc.name}</div>
-          <div style="font-size: 12px; color: var(--text-secondary);">${loc.description}</div>
-        </div>
-      `;
-    });
-    html += '</div>';
-    
-    showLocationInfo('所有地点', '校园内的所有重要地点');
-    document.getElementById('location-info').innerHTML = html;
-  }
-
-  // ====== 通讯录功能 ======
-  function initContacts() {
-    // 设置联系人数量统计
-    updateContactStats();
-    
-    // 监听搜索框
-    document.getElementById('contact-search').addEventListener('input', filterContacts);
-  }
-
-  function renderContacts(filterText = '') {
-    const listDiv = document.getElementById('contacts-list');
-    let filteredContacts = contacts;
-    
-    if (filterText) {
-      filteredContacts = contacts.filter(contact => 
-        contact.name.toLowerCase().includes(filterText.toLowerCase()) ||
-        contact.phone.includes(filterText)
-      );
-    }
-    
-    let html = '';
-    filteredContacts.forEach(contact => {
-      const statusClass = contact.status === 'online' ? 'online' : 
-                         contact.status === 'busy' ? 'busy' : 'offline';
-      const statusText = contact.status === 'online' ? '在线' :
-                        contact.status === 'busy' ? '忙碌' : '离线';
-      
-      html += `
-        <div class="contact-item" onclick="startSMSWith('${contact.name}')">
-          <div class="contact-avatar" style="background: linear-gradient(135deg, ${contact.color}, ${contact.color}80);">
-            ${contact.avatar}
-          </div>
-          <div class="contact-info">
-            <div class="contact-name">${contact.name}</div>
-            <div class="contact-phone">${contact.phone}</div>
-            <div class="contact-status">
-              <span class="status-dot status-${contact.status}"></span>
-              ${statusText} • ${contact.lastSeen}
+    <div id="hypnosis-extension">
+        <!-- 头部 -->
+        <div class="extension-header">
+            <div class="header-left">
+                <div class="app-icon">✨</div>
+                <div class="app-title">
+                    <h3>催眠APP扩展</h3>
+                    <p class="app-subtitle">增强功能面板</p>
+                </div>
             </div>
-          </div>
+            <div class="header-right">
+                <button class="close-btn" onclick="closeExtension()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
         </div>
-      `;
-    });
-    
-    listDiv.innerHTML = html || '<div style="text-align: center; padding: 40px; color: var(--text-muted);">未找到联系人</div>';
-    updateContactStats();
-  }
 
-  function filterContacts() {
-    const searchText = document.getElementById('contact-search').value;
-    renderContacts(searchText);
-  }
-
-  function clearSearch() {
-    document.getElementById('contact-search').value = '';
-    renderContacts();
-  }
-
-  function updateContactStats() {
-    const onlineCount = contacts.filter(c => c.status === 'online').length;
-    document.getElementById('contact-count').textContent = contacts.length;
-    document.getElementById('online-count').textContent = onlineCount;
-  }
-
-  // ====== 短信功能 ======
-  function initSMS() {
-    // 监听短信输入框
-    const smsInput = document.getElementById('sms-input');
-    smsInput.addEventListener('input', function() {
-      const charCount = this.value.length;
-      document.getElementById('char-count').textContent = charCount;
-      
-      // 字符数警告
-      const counter = document.querySelector('.char-counter');
-      if (charCount > 450) {
-        counter.style.color = 'var(--warning-color)';
-      } else if (charCount > 480) {
-        counter.style.color = 'var(--danger-color)';
-      } else {
-        counter.style.color = 'var(--text-muted)';
-      }
-    });
-    
-    // 监听联系人选择
-    document.getElementById('sms-contact').addEventListener('change', updateSMSContactInfo);
-  }
-
-  function updateSMSContactInfo() {
-    const select = document.getElementById('sms-contact');
-    const contactName = select.value;
-    const infoDiv = document.getElementById('recipient-info');
-    
-    if (contactName) {
-      const contact = contacts.find(c => c.name === contactName);
-      if (contact) {
-        infoDiv.innerHTML = `
-          <span class="recipient-status ${contact.status === 'online' ? 'online' : 'offline'}">
-            ${contact.status === 'online' ? '在线' : '离线'}
-          </span>
-          <span style="color: var(--text-secondary);">${contact.phone}</span>
-        `;
-      }
-    } else {
-      infoDiv.innerHTML = '<span class="recipient-status offline">选择联系人</span>';
-    }
-  }
-
-  function sendSMS() {
-    const select = document.getElementById('sms-contact');
-    const input = document.getElementById('sms-input');
-    const conversation = document.getElementById('sms-conversation');
-    
-    const contactName = select.value;
-    const message = input.value.trim();
-    
-    if (!contactName) {
-      showNotification('请选择联系人', 'warning');
-      select.focus();
-      return;
-    }
-    
-    if (!message) {
-      showNotification('请输入消息内容', 'warning');
-      input.focus();
-      return;
-    }
-    
-    if (message.length > 500) {
-      showNotification('消息不能超过500字', 'warning');
-      return;
-    }
-    
-    // 创建发送的消息元素
-    const messageElement = document.createElement('div');
-    messageElement.className = 'message sent';
-    messageElement.innerHTML = `
-      <div class="message-avatar">😊</div>
-      <div class="message-content">
-        <div class="message-header">
-          <span class="message-sender">我</span>
-          <span class="message-time">${getCurrentTime()}</span>
+        <!-- 标签页 -->
+        <div class="extension-tabs">
+            <button class="tab-button active" onclick="switchTab('map')">
+                <span class="tab-icon">🗺️</span>
+                <span class="tab-label">地图</span>
+            </button>
+            <button class="tab-button" onclick="switchTab('contacts')">
+                <span class="tab-icon">📞</span>
+                <span class="tab-label">通讯录</span>
+            </button>
+            <button class="tab-button" onclick="switchTab('sms')">
+                <span class="tab-icon">💬</span>
+                <span class="tab-label">短信</span>
+            </button>
         </div>
-        <div class="message-text">${escapeHtml(message)}</div>
-      </div>
-    `;
-    
-    conversation.appendChild(messageElement);
-    conversation.scrollTop = conversation.scrollHeight;
-    
-    // 清空输入框
-    input.value = '';
-    document.getElementById('char-count').textContent = '0';
-    
-    // 发送到SillyTavern
-    sendToSillyTavern(`${contactName}，${message}`);
-    
-    // 显示发送成功动画
-    const sendBtn = document.querySelector('.send-btn');
-    sendBtn.innerHTML = '<span class="btn-icon">✓</span> 已发送';
-    sendBtn.style.background = 'linear-gradient(135deg, var(--success-color), #38a169)';
-    
-    setTimeout(() => {
-      sendBtn.innerHTML = '<span class="send-icon">✈️</span> 发送';
-      sendBtn.style.background = 'linear-gradient(135deg, var(--primary-color), var(--secondary-color))';
-    }, 2000);
-    
-    // 模拟回复（实际由SillyTavern处理）
-    setTimeout(() => {
-      const replyElement = document.createElement('div');
-      replyElement.className = 'message received';
-      replyElement.innerHTML = `
-        <div class="message-avatar">${contacts.find(c => c.name === contactName)?.avatar || '👤'}</div>
-        <div class="message-content">
-          <div class="message-header">
-            <span class="message-sender">${contactName}</span>
-            <span class="message-time">${getCurrentTime()}</span>
-          </div>
-          <div class="message-text">正在输入...</div>
+
+        <!-- 内容容器 -->
+        <div class="tab-content-container">
+            <!-- 地图标签页 -->
+            <div id="map-tab" class="tab-content active">
+                <div class="map-container">
+                    <div class="tab-header">
+                        <h4 class="tab-title">私立斋明学园地图</h4>
+                        <p class="tab-description">探索校园各个地点，快速移动</p>
+                    </div>
+                    
+                    <div class="map-preview">
+                        <div class="map-grid">
+                            <!-- 地图标记 -->
+                            <div class="map-marker" style="top: 30%; left: 40%;" 
+                                 onclick="showLocationInfo('教学楼', '二年级教室、图书室、电脑室')">
+                                <div class="marker-dot"></div>
+                            </div>
+                            <div class="map-marker" style="top: 60%; left: 20%;" 
+                                 onclick="showLocationInfo('体育馆', '运动场地，更衣室和淋浴间')">
+                                <div class="marker-dot"></div>
+                            </div>
+                            <div class="map-marker" style="top: 40%; left: 70%;" 
+                                 onclick="showLocationInfo('旧校舍', '午休避难所，安静少人')">
+                                <div class="marker-dot"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="location-info" id="location-info">
+                        <div class="info-placeholder">
+                            <div class="placeholder-icon">📍</div>
+                            <p>点击地图上的标记查看地点详情</p>
+                        </div>
+                    </div>
+                    
+                    <div class="map-actions">
+                        <button class="btn-primary" onclick="refreshMap()">
+                            <span class="btn-icon">🔄</span>
+                            刷新地图
+                        </button>
+                        <button class="btn-secondary" onclick="showAllLocations()">
+                            <span class="btn-icon">📋</span>
+                            所有地点
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 通讯录标签页 -->
+            <div id="contacts-tab" class="tab-content">
+                <div class="tab-header">
+                    <h4 class="tab-title">通讯录</h4>
+                    <p class="tab-description">联系校园中的角色</p>
+                </div>
+                
+                <div class="search-box">
+                    <div class="search-icon">🔍</div>
+                    <input type="text" id="contact-search" placeholder="搜索联系人..." oninput="filterContacts()">
+                </div>
+                
+                <div class="contacts-list" id="contacts-list">
+                    <!-- 联系人列表将动态生成 -->
+                </div>
+                
+                <div class="contacts-stats">
+                    <span class="stat-item">
+                        <span class="stat-label">联系人</span>
+                        <span class="stat-value" id="contact-count">4</span>
+                    </span>
+                    <span class="stat-item">
+                        <span class="stat-label">在线</span>
+                        <span class="stat-value" id="online-count">2</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- 短信标签页 -->
+            <div id="sms-tab" class="tab-content">
+                <div class="tab-header">
+                    <h4 class="tab-title">短信</h4>
+                    <p class="tab-description">与角色发送消息</p>
+                </div>
+                
+                <div class="sms-recipient">
+                    <div class="recipient-select">
+                        <div class="select-icon">👤</div>
+                        <select id="sms-contact">
+                            <option value="">选择联系人</option>
+                            <option value="西园寺爱丽莎">西园寺爱丽莎</option>
+                            <option value="月咏深雪">月咏深雪</option>
+                            <option value="犬冢夏美">犬冢夏美</option>
+                            <option value="阿宅君">阿宅君</option>
+                        </select>
+                        <div class="select-arrow">▼</div>
+                    </div>
+                </div>
+                
+                <div class="sms-conversation" id="sms-conversation">
+                    <div class="message received">
+                        <div class="message-avatar">🤖</div>
+                        <div class="message-content">
+                            <div class="message-header">
+                                <span class="message-sender">系统</span>
+                                <span class="message-time">14:30</span>
+                            </div>
+                            <div class="message-text">
+                                短信功能已就绪。您可以向角色发送短信，他们会回复您。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="sms-input-area">
+                    <textarea id="sms-input" placeholder="输入消息..." rows="3"></textarea>
+                    <div class="input-actions">
+                        <div class="char-counter">
+                            <span id="char-count">0</span>/500
+                        </div>
+                        <button class="send-btn" onclick="sendSMS()">
+                            <span class="send-icon">✈️</span>
+                            发送
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-      `;
-      conversation.appendChild(replyElement);
-      conversation.scrollTop = conversation.scrollHeight;
-      
-      // 模拟思考延迟
-      setTimeout(() => {
-        const replyText = replyElement.querySelector('.message-text');
-        if (replyText) {
-          replyText.textContent = '收到你的消息了，稍后回复你。';
-          replyElement.style.animation = 'slideIn 0.3s ease';
+    </div>
+
+    <script>
+        // 简化的JavaScript功能
+        let contacts = [
+            { name: '西园寺爱丽莎', phone: '090-XXXX-0001', status: 'online', avatar: '👑' },
+            { name: '月咏深雪', phone: '090-XXXX-0002', status: 'online', avatar: '❄️' },
+            { name: '犬冢夏美', phone: '090-XXXX-0003', status: 'busy', avatar: '🐕' },
+            { name: '阿宅君', phone: '090-XXXX-0004', status: 'offline', avatar: '👓' }
+        ];
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            if (tabName === 'contacts') renderContacts();
         }
-      }, 1000);
-    }, 1500);
-  }
 
-  function startSMSWith(contactName) {
-    // 切换到短信标签页
-    switchTab('sms');
-    
-    // 设置联系人
-    setTimeout(() => {
-      const select = document.getElementById('sms-contact');
-      select.value = contactName;
-      updateSMSContactInfo();
-      document.getElementById('sms-input').focus();
-    }, 100);
-  }
-
-  function addEmoji() {
-    const input = document.getElementById('sms-input');
-    const emojis = ['😊', '😂', '🥰', '😎', '🤔', '👍', '❤️', '🎉', '✨', '🌟'];
-    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-    
-    input.value += randomEmoji;
-    input.focus();
-    input.dispatchEvent(new Event('input'));
-    
-    showNotification(`添加了表情 ${randomEmoji}`, 'info');
-  }
-
-  function attachFile() {
-    showNotification('文件上传功能开发中', 'info');
-  }
-
-  // ====== 工具函数 ======
-  function getCurrentTime() {
-    const now = new Date();
-    return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-  }
-
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  function showNotification(message, type = 'info') {
-    // 创建通知元素
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 12px 20px;
-      background: ${type === 'success' ? '#48bb78' : type === 'warning' ? '#ed8936' : type === 'error' ? '#f56565' : '#4299e1'};
-      color: white;
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow-lg);
-      z-index: 10001;
-      animation: slideIn 0.3s ease;
-      font-size: 13px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    `;
-    
-    notification.innerHTML = `
-      <span style="font-size: 16px;">${type === 'success' ? '✓' : type === 'warning' ? '⚠' : type === 'error' ? '✗' : 'ℹ'}</span>
-      <span>${message}</span>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // 3秒后移除
-    setTimeout(() => {
-      notification.style.animation = 'slideIn 0.3s ease reverse';
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.parentNode.removeChild(notification);
+        function showLocationInfo(name, description) {
+            document.getElementById('location-info').innerHTML = `
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                        <span style="font-size:20px;">📍</span>
+                        <h5 style="color:var(--primary-color);">${name}</h5>
+                    </div>
+                    <p style="font-size:13px; color:var(--text-secondary);">${description}</p>
+                    <button class="btn-primary" onclick="travelToLocation('${name}')" style="margin-top:10px; width:100%;">
+                        🚶 前往此处
+                    </button>
+                </div>
+            `;
         }
-      }, 300);
-    }, 3000);
-  }
 
-  function addToFavorites(locationName) {
-    showNotification(`已收藏地点: ${locationName}`, 'success');
-  }
+        function travelToLocation(location) {
+            if (window.parent && window.parent.STInterface) {
+                window.parent.STInterface.sendUserMessage(`（移动到${location}）`);
+            }
+            console.log('前往:', location);
+        }
 
-  function closeExtension() {
-    // 这个函数会被父页面调用
-    if (parent && parent.document.getElementById('hypnosis-extension-iframe')) {
-      parent.document.getElementById('hypnosis-extension-iframe').style.display = 'none';
-    }
-  }
+        function refreshMap() {
+            console.log('刷新地图');
+        }
 
-  function sendToSillyTavern(message) {
-    // 与SillyTavern通信
-    if (window.STInterface && window.STInterface.sendUserMessage) {
-      window.STInterface.sendUserMessage(message);
-    } else if (parent && parent.STInterface) {
-      parent.STInterface.sendUserMessage(message);
-    } else {
-      console.log('[SMS发送到ST]:', message);
-      showNotification('消息已记录，但ST集成未完全加载', 'warning');
-    }
-  }
+        function showAllLocations() {
+            const locations = [
+                { name: '教学楼', desc: '二年级教室、图书室、电脑室' },
+                { name: '体育馆', desc: '运动场地，更衣室和淋浴间' },
+                { name: '旧校舍', desc: '午休避难所，安静少人' },
+                { name: '食堂', desc: '午餐和小卖部所在地' }
+            ];
+            
+            let html = '<div style="max-height:200px; overflow-y:auto;">';
+            locations.forEach(loc => {
+                html += `
+                    <div style="padding:8px; border-bottom:1px solid var(--border-color);">
+                        <div style="font-weight:600; color:var(--primary-color);">${loc.name}</div>
+                        <div style="font-size:12px; color:var(--text-secondary);">${loc.desc}</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            showLocationInfo('所有地点', '校园内的所有重要地点');
+            document.getElementById('location-info').innerHTML = html;
+        }
 
-  // 初始化渲染
-  setTimeout(() => {
-    renderContacts();
-    console.log('美化界面已加载完成');
-  }, 100);
-</script>
+        function renderContacts() {
+            const list = document.getElementById('contacts-list');
+            let html = '';
+            contacts.forEach(contact => {
+                const statusClass = contact.status === 'online' ? 'status-online' : 
+                                  contact.status === 'busy' ? 'status-busy' : 'status-offline';
+                const statusText = contact.status === 'online' ? '在线' :
+                                  contact.status === 'busy' ? '忙碌' : '离线';
+                
+                html += `
+                    <div class="contact-item" onclick="startSMSWith('${contact.name}')">
+                        <div class="contact-avatar">${contact.avatar}</div>
+                        <div class="contact-info">
+                            <div class="contact-name">${contact.name}</div>
+                            <div class="contact-phone">${contact.phone}</div>
+                            <div class="contact-status">
+                                <span class="status-dot ${statusClass}"></span>
+                                ${statusText}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+            
+            document.getElementById('contact-count').textContent = contacts.length;
+            document.getElementById('online-count').textContent = contacts.filter(c => c.status === 'online').length;
+        }
+
+        function filterContacts() {
+            const search = document.getElementById('contact-search').value.toLowerCase();
+            const items = document.querySelectorAll('.contact-item');
+            
+            items.forEach(item => {
+                const name = item.querySelector('.contact-name').textContent.toLowerCase();
+                const phone = item.querySelector('.contact-phone').textContent;
+                item.style.display = name.includes(search) || phone.includes(search) ? 'flex' : 'none';
+            });
+        }
+
+        function startSMSWith(name) {
+            switchTab('sms');
+            document.getElementById('sms-contact').value = name;
+            document.getElementById('sms-input').focus();
+        }
+
+        function sendSMS() {
+            const contact = document.getElementById('sms-contact').value;
+            const message = document.getElementById('sms-input').value.trim();
+            const conversation = document.getElementById('sms-conversation');
+            
+            if (!contact || !message) return;
+            
+            // 添加发送的消息
+            const sentMsg = document.createElement('div');
+            sentMsg.className = 'message sent';
+            sentMsg.innerHTML = `
+                <div class="message-avatar">😊</div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-sender">我</span>
+                        <span class="message-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    <div class="message-text">${message}</div>
+                </div>
+            `;
+            conversation.appendChild(sentMsg);
+            
+            // 清空输入
+            document.getElementById('sms-input').value = '';
+            document.getElementById('char-count').textContent = '0';
+            
+            // 发送到SillyTavern
+            if (window.parent && window.parent.STInterface) {
+                window.parent.STInterface.sendUserMessage(`${contact}，${message}`);
+            }
+            
+            // 模拟回复
+            setTimeout(() => {
+                const replyMsg = document.createElement('div');
+                replyMsg.className = 'message received';
+                replyMsg.innerHTML = `
+                    <div class="message-avatar">${contacts.find(c => c.name === contact)?.avatar || '👤'}</div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="message-sender">${contact}</span>
+                            <span class="message-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        </div>
+                        <div class="message-text">收到消息了，稍后回复。</div>
+                    </div>
+                `;
+                conversation.appendChild(replyMsg);
+                conversation.scrollTop = conversation.scrollHeight;
+            }, 1000);
+            
+            conversation.scrollTop = conversation.scrollHeight;
+        }
+
+        function closeExtension() {
+            if (window.parent && window.parent.document.getElementById('hypnosis-extension-iframe')) {
+                window.parent.document.getElementById('hypnosis-extension-iframe').style.display = 'none';
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            renderContacts();
+            
+            // 监听字符计数
+            document.getElementById('sms-input').addEventListener('input', function() {
+                document.getElementById('char-count').textContent = this.value.length;
+            });
+            
+            console.log('扩展面板已加载 - 响应式优化版');
+        });
+    </script>
+</body>
+</html>
