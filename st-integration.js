@@ -9,7 +9,7 @@
     // ================================
     const CONFIG = {
         appName: '催眠APP扩展',
-        version: '1.0.0',
+        version: '1.1.0', // 更新版本号
         debug: true,
         timeout: 10000, // 10秒超时
         retryDelay: 500, // 重试延迟
@@ -235,20 +235,36 @@
         },
         
         // ================================
-        // 角色管理
+        // 角色管理 - 增强版
         // ================================
         
         // 获取角色列表（从[initvar]变量）
         getCharacters: async function() {
             try {
-                // 尝试从酒馆助手获取
-                const characters = await this._getCharactersFromTavernHelper();
-                if (characters && characters.length > 0) {
-                    console.log(`📇 从酒馆助手加载了 ${characters.length} 个角色`);
-                    return characters;
+                console.log('📇 开始获取角色列表...');
+                
+                // 方法1：尝试从酒馆助手变量直接获取
+                const directChars = await this._getCharactersDirectFromTavern();
+                if (directChars && directChars.length > 0) {
+                    console.log(`✅ 直接加载了 ${directChars.length} 个角色`);
+                    return directChars;
                 }
                 
-                // 备用方案：从DOM解析
+                // 方法2：尝试从酒馆助手API获取
+                const apiChars = await this._getCharactersFromTavernHelper();
+                if (apiChars && apiChars.length > 0) {
+                    console.log(`✅ 通过API加载了 ${apiChars.length} 个角色`);
+                    return apiChars;
+                }
+                
+                // 方法3：从聊天记录中提取角色
+                const extractedChars = await this._extractCharactersFromChat();
+                if (extractedChars.length > 0) {
+                    console.log(`✅ 从聊天记录提取了 ${extractedChars.length} 个角色`);
+                    return extractedChars;
+                }
+                
+                // 方法4：备用方案：从DOM解析
                 const fallbackCharacters = this._getCharactersFromDOM();
                 if (fallbackCharacters.length > 0) {
                     console.log(`📇 从DOM加载了 ${fallbackCharacters.length} 个角色`);
@@ -265,7 +281,113 @@
             }
         },
         
-        // 从酒馆助手变量获取角色
+        // 从酒馆助手变量直接获取角色
+        _getCharactersDirectFromTavern: async function() {
+            try {
+                if (!window.parent || !window.parent.TavernHelper) {
+                    throw new Error('酒馆助手未找到');
+                }
+                
+                const TH = window.parent.TavernHelper;
+                
+                // 等待酒馆助手初始化
+                await this._waitForTavernHelper();
+                
+                // 获取聊天变量 - 使用更可靠的变量访问方式
+                let variables;
+                try {
+                    variables = TH.getVariables({ type: 'chat' });
+                } catch (e) {
+                    // 尝试备用方法
+                    variables = TH.getChatVariables ? TH.getChatVariables() : null;
+                }
+                
+                if (!variables) {
+                    throw new Error('未获取到变量');
+                }
+                
+                console.log('获取到的变量结构:', variables);
+                
+                // 尝试多种可能的变量路径
+                let roleData = null;
+                
+                // 路径1: stat_data.角色
+                if (variables.stat_data && variables.stat_data.角色) {
+                    roleData = variables.stat_data.角色;
+                }
+                // 路径2: stat_data.characters
+                else if (variables.stat_data && variables.stat_data.characters) {
+                    roleData = variables.stat_data.characters;
+                }
+                // 路径3: 直接查找角色数据
+                else if (variables.角色) {
+                    roleData = variables.角色;
+                }
+                // 路径4: characters
+                else if (variables.characters) {
+                    roleData = variables.characters;
+                }
+                // 路径5: 查找任何包含"角色"或"character"的键
+                else {
+                    const keys = Object.keys(variables);
+                    for (const key of keys) {
+                        if (key.includes('角色') || key.includes('character')) {
+                            roleData = variables[key];
+                            break;
+                        }
+                    }
+                }
+                
+                if (!roleData) {
+                    throw new Error('未找到角色变量');
+                }
+                
+                const characters = [];
+                
+                // 转换格式 - 处理数组或对象格式
+                if (Array.isArray(roleData)) {
+                    roleData.forEach((item, index) => {
+                        const name = item.name || item.名称 || `角色${index + 1}`;
+                        characters.push({
+                            name: name,
+                            phone: this._generatePhoneNumber(name),
+                            status: this._generateStatus(name),
+                            avatar: this._generateAvatar(name),
+                            metadata: {
+                                好感度: item.好感度 || item.favor || 0,
+                                警戒度: item.警戒度 || item.alertness || 0,
+                                服从度: item.服从度 || item.obedience || 0,
+                                ...item
+                            }
+                        });
+                    });
+                } else {
+                    // 对象格式
+                    Object.entries(roleData).forEach(([name, data]) => {
+                        characters.push({
+                            name: name,
+                            phone: this._generatePhoneNumber(name),
+                            status: this._generateStatus(name),
+                            avatar: this._generateAvatar(name),
+                            metadata: {
+                                好感度: data.好感度 || data.favor || 0,
+                                警戒度: data.警戒度 || data.alertness || 0,
+                                服从度: data.服从度 || data.obedience || 0,
+                                ...data
+                            }
+                        });
+                    });
+                }
+                
+                return characters;
+                
+            } catch (error) {
+                console.warn('从酒馆助手直接获取角色失败:', error.message);
+                return null;
+            }
+        },
+        
+        // 从酒馆助手API获取角色
         _getCharactersFromTavernHelper: async function() {
             try {
                 if (!window.parent || !window.parent.TavernHelper) {
@@ -304,8 +426,63 @@
                 return characters;
                 
             } catch (error) {
-                console.warn('从酒馆助手获取角色失败:', error.message);
+                console.warn('从酒馆助手API获取角色失败:', error.message);
                 return null;
+            }
+        },
+        
+        // 从聊天记录中提取角色
+        _extractCharactersFromChat: async function() {
+            try {
+                if (!window.parent || !window.parent.TavernHelper) {
+                    return [];
+                }
+                
+                const TH = window.parent.TavernHelper;
+                const characters = [];
+                const foundNames = new Set();
+                
+                // 获取最近的聊天消息
+                const recentMessages = TH.getChatMessages(-10, { include_swipes: false });
+                
+                if (!recentMessages || recentMessages.length === 0) {
+                    return [];
+                }
+                
+                // 在最近的AI回复中查找角色名
+                const aiMessages = recentMessages.filter(msg => msg.role === 'assistant');
+                
+                for (const msg of aiMessages) {
+                    const text = msg.message || '';
+                    
+                    // 使用正则表达式查找可能的角色名（中文名格式）
+                    const nameRegex = /([\u4e00-\u9fa5]{2,4})/g;
+                    const matches = text.match(nameRegex);
+                    
+                    if (matches) {
+                        // 去重并添加到通讯录
+                        const excludeWords = ['主角', '玩家', '系统', '消息', '回复', '对话', '自己', '你们'];
+                        
+                        matches.forEach(name => {
+                            if (!excludeWords.includes(name) && !foundNames.has(name)) {
+                                foundNames.add(name);
+                                characters.push({
+                                    name: name,
+                                    phone: this._generatePhoneNumber(name),
+                                    status: 'online',
+                                    avatar: this._generateAvatar(name),
+                                    metadata: {}
+                                });
+                            }
+                        });
+                    }
+                }
+                
+                return characters;
+                
+            } catch (error) {
+                console.warn('从聊天记录提取角色失败:', error);
+                return [];
             }
         },
         
@@ -319,7 +496,9 @@
                     '.character-card',
                     '.char-item',
                     '.avatar-container',
-                    '.character-avatar'
+                    '.character-avatar',
+                    '.character-portrait',
+                    '[data-character]'
                 ].join(','));
                 
                 charElements.forEach((element, index) => {
@@ -353,9 +532,29 @@
         
         // 从元素中提取角色名
         _extractCharacterName: function(element) {
-            const text = element.textContent || '';
-            const possibleNames = text.trim().split('\n')[0];
-            return possibleNames.length > 0 && possibleNames.length < 20 ? possibleNames : null;
+            // 尝试多种属性获取角色名
+            const possibleSources = [
+                () => element.getAttribute('data-character'),
+                () => element.getAttribute('title'),
+                () => element.getAttribute('alt'),
+                () => element.querySelector('.char-name')?.textContent,
+                () => element.querySelector('.character-name')?.textContent,
+                () => element.querySelector('.name')?.textContent,
+                () => element.textContent.trim().split('\n')[0]
+            ];
+            
+            for (const source of possibleSources) {
+                try {
+                    const name = source();
+                    if (name && typeof name === 'string' && name.length > 0 && name.length < 20) {
+                        return name.trim();
+                    }
+                } catch (e) {
+                    // 忽略错误
+                }
+            }
+            
+            return null;
         },
         
         // 生成手机号
@@ -378,6 +577,77 @@
             const avatars = ['👑', '❄️', '🐕', '👓', '🌸', '🎀', '🐱', '🦊', '🐰', '🦋', '✨', '⭐'];
             const hash = Array.from(name).reduce((acc, char) => acc + char.charCodeAt(0), 0);
             return avatars[hash % avatars.length];
+        },
+        
+        // ================================
+        // 角色管理 - 新增功能
+        // ================================
+        
+        // 请求AI添加新角色
+        requestNewContact: async function(characterName) {
+            try {
+                if (!window.parent || !window.parent.TavernHelper) {
+                    throw new Error('酒馆助手未找到');
+                }
+                
+                const TH = window.parent.TavernHelper;
+                
+                // 发送系统消息让AI介绍这个角色
+                await TH.createChatMessages([{
+                    role: 'system',
+                    message: `请介绍角色"${characterName}"，包括外貌、性格和与主角的关系。并在介绍中自然提及这个角色将被添加到通讯录中。`
+                }]);
+                
+                // 触发AI回复
+                await TH.triggerSlash('/trigger');
+                
+                return { success: true };
+                
+            } catch (error) {
+                console.error('请求AI添加角色失败:', error);
+                return { success: false, error: error.message };
+            }
+        },
+        
+        // 扫描聊天记录寻找角色
+        scanMessagesForContacts: async function() {
+            try {
+                if (!window.parent || !window.parent.TavernHelper) {
+                    throw new Error('需要酒馆助手支持此功能');
+                }
+                
+                const TH = window.parent.TavernHelper;
+                const messages = TH.getChatMessages('0-{{lastMessageId}}', { include_swipes: false });
+                
+                let foundContacts = [];
+                
+                // 查找所有独特的角色名
+                messages.forEach(msg => {
+                    const text = msg.message || '';
+                    // 匹配中文名（2-4个字）
+                    const nameMatches = text.match(/([\u4e00-\u9fa5]{2,4})/g);
+                    
+                    if (nameMatches) {
+                        nameMatches.forEach(name => {
+                            // 过滤掉常见的非角色词汇
+                            const excludeWords = ['主角', '玩家', '系统', '消息', '回复', '对话', '自己', '你们'];
+                            if (!excludeWords.includes(name) && !foundContacts.includes(name)) {
+                                foundContacts.push(name);
+                            }
+                        });
+                    }
+                });
+                
+                return {
+                    success: true,
+                    contacts: foundContacts,
+                    count: foundContacts.length
+                };
+                
+            } catch (error) {
+                console.error('扫描聊天记录失败:', error);
+                return { success: false, error: error.message };
+            }
         },
         
         // ================================
@@ -614,6 +884,46 @@
         },
         
         // ================================
+        // 消息监听 - 解决跨域问题
+        // ================================
+        
+        // 监听来自扩展iframe的消息
+        _setupMessageListener: function() {
+            window.addEventListener('message', (event) => {
+                // 验证消息来源
+                if (event.source !== window.parent) return;
+                
+                const data = event.data;
+                
+                if (data === 'CLOSE_EXTENSION') {
+                    console.log('收到关闭扩展消息');
+                    this._closeExtension();
+                } else if (data.action === 'getCharacters') {
+                    // 响应获取角色的请求
+                    this.getCharacters().then(characters => {
+                        window.parent.postMessage({
+                            action: 'charactersData',
+                            characters: characters
+                        }, '*');
+                    });
+                }
+            });
+        },
+        
+        // 关闭扩展
+        _closeExtension: function() {
+            try {
+                const iframe = document.getElementById('hypnosis-extension-iframe');
+                if (iframe) {
+                    iframe.style.display = 'none';
+                    this.showNotification('扩展已关闭', 'info');
+                }
+            } catch (e) {
+                console.log('关闭扩展失败:', e);
+            }
+        },
+        
+        // ================================
         // 调试和诊断
         // ================================
         
@@ -708,6 +1018,9 @@
     const initialize = () => {
         try {
             addGlobalStyles();
+            
+            // 设置消息监听器
+            STInterface._setupMessageListener();
             
             // 运行诊断（调试模式）
             if (CONFIG.debug) {
