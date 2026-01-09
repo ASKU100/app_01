@@ -1,0 +1,864 @@
+<!-- floating_ball.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>悬浮球插件</title>
+    <style>
+        /* 避免冲突的CSS命名空间 */
+        .fb-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99999;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .fb-ball {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            position: relative;
+            z-index: 1000;
+        }
+
+        .fb-ball:hover {
+            transform: scale(1.1);
+        }
+
+        .fb-ball-icon {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .fb-menu {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            padding: 10px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 150px;
+        }
+
+        .fb-menu.active {
+            display: flex;
+        }
+
+        .fb-menu-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            transition: background 0.2s;
+        }
+
+        .fb-menu-btn:hover {
+            background: #f5f5f5;
+        }
+
+        .fb-menu-btn i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .fb-window {
+            position: fixed;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: none;
+            flex-direction: column;
+            min-width: 300px;
+            min-height: 400px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow: hidden;
+            z-index: 9999;
+        }
+
+        .fb-window-header {
+            padding: 16px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: move;
+            user-select: none;
+        }
+
+        .fb-window-title {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .fb-window-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .fb-window-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        .fb-window-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .fb-window-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f9f9f9;
+        }
+
+        .fb-window.minimized {
+            height: auto;
+            min-height: unset;
+        }
+
+        .fb-window.minimized .fb-window-content {
+            display: none;
+        }
+
+        /* 地图窗口样式 */
+        .fb-map-container {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 20px;
+            height: 500px;
+        }
+
+        .fb-map-locations {
+            overflow-y: auto;
+            border-right: 1px solid #e0e0e0;
+            padding-right: 15px;
+        }
+
+        .fb-location-item {
+            padding: 10px 15px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .fb-location-item:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+        }
+
+        .fb-map-view {
+            background: #f0f0f0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* 通讯录样式 */
+        .fb-contacts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .fb-contact-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 15px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .fb-contact-item:hover {
+            background: #f8f9ff;
+            border-color: #667eea;
+        }
+
+        .fb-contact-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .fb-contact-info {
+            flex: 1;
+        }
+
+        .fb-contact-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .fb-contact-phone {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* 短信样式 */
+        .fb-messages-container {
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+        }
+
+        .fb-messages-header {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            background: white;
+        }
+
+        .fb-messages-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .fb-message-item {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            position: relative;
+        }
+
+        .fb-message-sent {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .fb-message-received {
+            align-self: flex-start;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .fb-message-time {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .fb-message-input {
+            padding: 15px;
+            border-top: 1px solid #e0e0e0;
+            background: white;
+            display: flex;
+            gap: 10px;
+        }
+
+        .fb-message-textarea {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 24px;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .fb-message-textarea:focus {
+            border-color: #667eea;
+        }
+
+        .fb-message-send {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .fb-message-send:hover {
+            transform: scale(1.05);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .fb-container {
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .fb-ball {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .fb-window {
+                width: 90vw !important;
+                left: 5vw !important;
+                right: 5vw !important;
+                top: 10vh !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="fb-container">
+        <div class="fb-ball" id="floating_ball">
+            <div class="fb-ball-icon">+</div>
+        </div>
+        <div class="fb-menu" id="floating_menu">
+            <button class="fb-menu-btn" onclick="FloatingBall.openWindow('map')">
+                <i>🗺️</i> 地图
+            </button>
+            <button class="fb-menu-btn" onclick="FloatingBall.openWindow('contacts')">
+                <i>📱</i> 通讯录
+            </button>
+            <button class="fb-menu-btn" onclick="FloatingBall.openWindow('messages')">
+                <i>💬</i> 短信
+            </button>
+        </div>
+    </div>
+
+    <!-- 地图窗口 -->
+    <div class="fb-window" id="floating_window_map" style="width: 600px; height: 550px;">
+        <div class="fb-window-header">
+            <div class="fb-window-title">🗺️ 地图</div>
+            <div class="fb-window-controls">
+                <button class="fb-window-btn" onclick="FloatingBall.minimizeWindow('map')">_</button>
+                <button class="fb-window-btn" onclick="FloatingBall.closeWindow('map')">×</button>
+            </div>
+        </div>
+        <div class="fb-window-content">
+            <div class="fb-map-container">
+                <div class="fb-map-locations" id="floating_map_locations">
+                    <!-- 地点列表将通过JavaScript动态生成 -->
+                </div>
+                <div class="fb-map-view" id="floating_map_view">
+                    选择地点查看详情
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通讯录窗口 -->
+    <div class="fb-window" id="floating_window_contacts" style="width: 400px; height: 500px;">
+        <div class="fb-window-header">
+            <div class="fb-window-title">📱 通讯录</div>
+            <div class="fb-window-controls">
+                <button class="fb-window-btn" onclick="FloatingBall.minimizeWindow('contacts')">_</button>
+                <button class="fb-window-btn" onclick="FloatingBall.closeWindow('contacts')">×</button>
+            </div>
+        </div>
+        <div class="fb-window-content">
+            <div class="fb-contacts-list" id="floating_contacts_list">
+                <!-- 联系人列表将通过JavaScript动态生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 短信窗口 -->
+    <div class="fb-window" id="floating_window_messages" style="width: 400px; height: 600px;">
+        <div class="fb-window-header">
+            <div class="fb-window-title">💬 短信</div>
+            <div class="fb-window-controls">
+                <button class="fb-window-btn" onclick="FloatingBall.minimizeWindow('messages')">_</button>
+                <button class="fb-window-btn" onclick="FloatingBall.closeWindow('messages')">×</button>
+            </div>
+        </div>
+        <div class="fb-window-content">
+            <div class="fb-messages-container">
+                <div class="fb-messages-header">
+                    <select id="floating_message_contact" class="fb-message-textarea" style="width: 100%;">
+                        <option value="">选择联系人...</option>
+                    </select>
+                </div>
+                <div class="fb-messages-list" id="floating_messages_list">
+                    <!-- 消息列表将通过JavaScript动态生成 -->
+                </div>
+                <div class="fb-message-input">
+                    <textarea class="fb-message-textarea" id="floating_message_input" placeholder="输入消息..." rows="2"></textarea>
+                    <button class="fb-message-send" onclick="FloatingBall.sendMessage()">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 避免冲突的独立命名空间
+        const FloatingBall = {
+            windows: {},
+            draggedWindow: null,
+            dragOffset: { x: 0, y: 0 },
+            currentContact: null,
+            messageHistory: {},
+            
+            init() {
+                // 初始化悬浮球点击事件
+                document.getElementById('floating_ball').addEventListener('click', this.toggleMenu);
+                
+                // 初始化窗口拖拽功能
+                this.initWindowDrag();
+                
+                // 从变量系统加载数据
+                this.loadData();
+                
+                // 监听短信回复
+                this.setupMessageListener();
+                
+                console.log('悬浮球插件初始化完成');
+            },
+            
+            toggleMenu() {
+                const menu = document.getElementById('floating_menu');
+                menu.classList.toggle('active');
+            },
+            
+            initWindowDrag() {
+                const windows = ['map', 'contacts', 'messages'];
+                windows.forEach(type => {
+                    const windowEl = document.getElementById(`floating_window_${type}`);
+                    const header = windowEl.querySelector('.fb-window-header');
+                    
+                    this.windows[type] = {
+                        el: windowEl,
+                        minimized: false,
+                        position: { x: 100, y: 100 }
+                    };
+                    
+                    header.addEventListener('mousedown', (e) => {
+                        this.startDrag(type, e);
+                    });
+                    
+                    header.addEventListener('touchstart', (e) => {
+                        this.startDrag(type, e.touches[0]);
+                    });
+                });
+                
+                document.addEventListener('mousemove', (e) => this.drag(e));
+                document.addEventListener('touchmove', (e) => this.drag(e.touches[0]));
+                document.addEventListener('mouseup', () => this.stopDrag());
+                document.addEventListener('touchend', () => this.stopDrag());
+            },
+            
+            startDrag(type, e) {
+                this.draggedWindow = type;
+                const rect = this.windows[type].el.getBoundingClientRect();
+                this.dragOffset.x = e.clientX - rect.left;
+                this.dragOffset.y = e.clientY - rect.top;
+            },
+            
+            drag(e) {
+                if (!this.draggedWindow) return;
+                
+                const windowEl = this.windows[this.draggedWindow].el;
+                windowEl.style.left = (e.clientX - this.dragOffset.x) + 'px';
+                windowEl.style.top = (e.clientY - this.dragOffset.y) + 'px';
+                windowEl.style.right = 'auto';
+                windowEl.style.bottom = 'auto';
+            },
+            
+            stopDrag() {
+                this.draggedWindow = null;
+            },
+            
+            openWindow(type) {
+                const windowEl = document.getElementById(`floating_window_${type}`);
+                windowEl.style.display = 'flex';
+                
+                // 默认位置
+                if (!windowEl.style.left && !windowEl.style.right) {
+                    windowEl.style.left = '100px';
+                    windowEl.style.top = '100px';
+                }
+                
+                // 加载数据
+                switch(type) {
+                    case 'map':
+                        this.loadMapData();
+                        break;
+                    case 'contacts':
+                        this.loadContacts();
+                        break;
+                    case 'messages':
+                        this.loadMessages();
+                        break;
+                }
+                
+                // 关闭菜单
+                document.getElementById('floating_menu').classList.remove('active');
+            },
+            
+            minimizeWindow(type) {
+                const windowEl = this.windows[type].el;
+                windowEl.classList.toggle('minimized');
+                this.windows[type].minimized = !this.windows[type].minimized;
+            },
+            
+            closeWindow(type) {
+                const windowEl = document.getElementById(`floating_window_${type}`);
+                windowEl.style.display = 'none';
+                windowEl.classList.remove('minimized');
+                this.windows[type].minimized = false;
+            },
+            
+            loadData() {
+                // 尝试从变量系统加载数据
+                if (window.FloatingVariables) {
+                    this.contacts = window.FloatingVariables.getContacts();
+                    this.locations = window.FloatingVariables.getLocations();
+                } else {
+                    // 默认数据
+                    this.contacts = [
+                        { name: '西园寺爱丽莎', phone: '090-XXXX-XXXX', avatar: 'SA' },
+                        { name: '月咏深雪', phone: '090-XXXX-XXXX', avatar: 'YS' },
+                        { name: '犬冢夏美', phone: '090-XXXX-XXXX', avatar: 'KS' },
+                        { name: '阿宅君', phone: '090-XXXX-XXXX', avatar: 'AK' }
+                    ];
+                    
+                    this.locations = [
+                        { name: '校舍本馆', areas: ['屋顶平台', '二年级教室', '图书室'] },
+                        { name: '体育馆栋', areas: ['体育馆主场', '更衣室', '淋浴间'] },
+                        { name: '社团大楼', areas: ['社团部室', '空房间'] },
+                        { name: '室外区域', areas: ['中庭', '大操场', '游泳池'] }
+                    ];
+                }
+            },
+            
+            loadMapData() {
+                const container = document.getElementById('floating_map_locations');
+                container.innerHTML = '';
+                
+                this.locations.forEach(location => {
+                    const item = document.createElement('div');
+                    item.className = 'fb-location-item';
+                    item.innerHTML = `<strong>${location.name}</strong>`;
+                    item.addEventListener('click', () => {
+                        this.showLocationDetail(location);
+                    });
+                    container.appendChild(item);
+                });
+            },
+            
+            showLocationDetail(location) {
+                const view = document.getElementById('floating_map_view');
+                let html = `<h3 style="margin-top: 0;">${location.name}</h3>`;
+                
+                if (location.areas && location.areas.length > 0) {
+                    html += '<ul style="padding-left: 20px; margin-top: 10px;">';
+                    location.areas.forEach(area => {
+                        html += `<li>${area}</li>`;
+                    });
+                    html += '</ul>';
+                }
+                
+                if (location.description) {
+                    html += `<p style="margin-top: 15px;">${location.description}</p>`;
+                }
+                
+                view.innerHTML = html;
+            },
+            
+            loadContacts() {
+                const container = document.getElementById('floating_contacts_list');
+                const select = document.getElementById('floating_message_contact');
+                
+                container.innerHTML = '';
+                select.innerHTML = '<option value="">选择联系人...</option>';
+                
+                this.contacts.forEach(contact => {
+                    // 添加到通讯录列表
+                    const item = document.createElement('div');
+                    item.className = 'fb-contact-item';
+                    item.innerHTML = `
+                        <div class="fb-contact-avatar">${contact.avatar || contact.name.charAt(0)}</div>
+                        <div class="fb-contact-info">
+                            <div class="fb-contact-name">${contact.name}</div>
+                            <div class="fb-contact-phone">${contact.phone}</div>
+                        </div>
+                    `;
+                    item.addEventListener('click', () => {
+                        this.selectContact(contact);
+                    });
+                    container.appendChild(item);
+                    
+                    // 添加到短信联系人下拉框
+                    const option = document.createElement('option');
+                    option.value = contact.name;
+                    option.textContent = contact.name;
+                    select.appendChild(option);
+                });
+            },
+            
+            selectContact(contact) {
+                this.currentContact = contact;
+                this.loadMessages();
+            },
+            
+            loadMessages() {
+                const contactSelect = document.getElementById('floating_message_contact');
+                const contactName = contactSelect.value || (this.currentContact ? this.currentContact.name : '');
+                
+                if (!contactName) return;
+                
+                // 加载该联系人的消息历史
+                if (!this.messageHistory[contactName]) {
+                    this.messageHistory[contactName] = [];
+                }
+                
+                const container = document.getElementById('floating_messages_list');
+                container.innerHTML = '';
+                
+                this.messageHistory[contactName].forEach(msg => {
+                    const item = document.createElement('div');
+                    item.className = `fb-message-item ${msg.sender === '我' ? 'fb-message-sent' : 'fb-message-received'}`;
+                    item.innerHTML = `
+                        <div>${msg.content}</div>
+                        <div class="fb-message-time">${msg.time}</div>
+                    `;
+                    container.appendChild(item);
+                });
+                
+                // 滚动到底部
+                container.scrollTop = container.scrollHeight;
+            },
+            
+            sendMessage() {
+                const input = document.getElementById('floating_message_input');
+                const contactSelect = document.getElementById('floating_message_contact');
+                const message = input.value.trim();
+                const contactName = contactSelect.value;
+                
+                if (!message || !contactName) {
+                    alert('请选择联系人并输入消息');
+                    return;
+                }
+                
+                // 添加到本地历史
+                if (!this.messageHistory[contactName]) {
+                    this.messageHistory[contactName] = [];
+                }
+                
+                const now = new Date();
+                const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                
+                this.messageHistory[contactName].push({
+                    id: Date.now().toString(),
+                    time: timeStr,
+                    sender: '我',
+                    content: message
+                });
+                
+                // 清空输入框
+                input.value = '';
+                
+                // 重新加载消息显示
+                this.loadMessages();
+                
+                // 发送到AI处理
+                this.sendToAI(contactName, message);
+            },
+            
+            sendToAI(contactName, message) {
+                if (!window.TavernHelper || !window.TavernHelper.createChatMessages) {
+                    console.warn('TavernHelper API不可用，使用模拟回复');
+                    this.simulateAIResponse(contactName);
+                    return;
+                }
+                
+                // 通过TavernHelper发送隐藏的系统消息
+                window.TavernHelper.createChatMessages([
+                    {
+                        role: 'user',
+                        content: `[短信发送]\n收件人: ${contactName}\n内容: ${message}\n时间: ${new Date().toLocaleString()}`
+                    }
+                ]);
+                
+                console.log('短信已发送到AI处理');
+            },
+            
+            simulateAIResponse(contactName) {
+                // 模拟AI回复（实际使用时应由AI生成）
+                setTimeout(() => {
+                    if (!this.messageHistory[contactName]) return;
+                    
+                    const responses = [
+                        "好的，我知道了。",
+                        "听起来不错！",
+                        "嗯，我考虑一下。",
+                        "抱歉，我现在有点忙。",
+                        "谢谢你的消息！"
+                    ];
+                    
+                    const response = responses[Math.floor(Math.random() * responses.length)];
+                    const now = new Date();
+                    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                    
+                    this.messageHistory[contactName].push({
+                        id: (Date.now() + 1).toString(),
+                        time: timeStr,
+                        sender: contactName,
+                        content: response
+                    });
+                    
+                    this.loadMessages();
+                }, 2000);
+            },
+            
+            setupMessageListener() {
+                // 监听页面变化，提取AI的短信回复
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.type === 'childList') {
+                            mutation.addedNodes.forEach((node) => {
+                                if (node.nodeType === 1 && node.textContent.includes('[短信回复]')) {
+                                    this.extractMessageReply(node.textContent);
+                                }
+                            });
+                        }
+                    });
+                });
+                
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            },
+            
+            extractMessageReply(text) {
+                // 从AI回复中提取短信内容
+                const regex = /\[短信回复\]\s*收件人:\s*(.*?)\s*内容:\s*(.*?)(?:\n|$)/s;
+                const match = text.match(regex);
+                
+                if (match) {
+                    const contactName = match[1].trim();
+                    const content = match[2].trim();
+                    
+                    if (contactName && content) {
+                        const now = new Date();
+                        const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                        
+                        if (!this.messageHistory[contactName]) {
+                            this.messageHistory[contactName] = [];
+                        }
+                        
+                        this.messageHistory[contactName].push({
+                            id: Date.now().toString(),
+                            time: timeStr,
+                            sender: contactName,
+                            content: content
+                        });
+                        
+                        // 如果当前正在查看该联系人的消息，刷新显示
+                        const currentContact = document.getElementById('floating_message_contact').value;
+                        if (currentContact === contactName) {
+                            this.loadMessages();
+                        }
+                        
+                        // 显示通知
+                        this.showNotification(`${contactName} 发来新消息`);
+                    }
+                }
+            },
+            
+            showNotification(message) {
+                // 简单的通知显示
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    z-index: 100000;
+                    animation: fb-fadeIn 0.3s ease;
+                `;
+                
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.animation = 'fb-fadeOut 0.3s ease';
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+                
+                // 添加CSS动画
+                if (!document.querySelector('#fb-notification-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'fb-notification-styles';
+                    style.textContent = `
+                        @keyframes fb-fadeIn {
+                            from { opacity: 0; transform: translateY(-10px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                        @keyframes fb-fadeOut {
+                            from { opacity: 1; transform: translateY(0); }
+                            to { opacity: 0; transform: translateY(-10px); }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+            }
+        };
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            FloatingBall.init();
+        });
+        
+        // 全局暴露（可选）
+        window.FloatingBallAPI = FloatingBall;
+    </script>
+</body>
+</html>
