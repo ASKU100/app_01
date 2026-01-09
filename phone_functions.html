@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手机功能前端 - 动态通讯录</title>
+    <style>
+        /* ===== 命名空间隔离 - 使用pf-前缀 ===== */
+        .pf-floating-ball {
+            position: fixed;
+            bottom: 120px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            box-shadow: 0 8px 32px rgba(103, 126, 234, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10000;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .pf-floating-ball:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 40px rgba(103, 126, 234, 0.4);
+        }
+
+        .pf-floating-ball-icon {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .pf-phone-container {
+            position: fixed;
+            bottom: 200px;
+            right: 20px;
+            width: 360px;
+            height: 600px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .pf-phone-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pf-phone-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .pf-phone-close, .pf-phone-sync {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s ease;
+        }
+
+        .pf-phone-close:hover, .pf-phone-sync:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .pf-phone-tabs {
+            display: flex;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 4px;
+            margin: 0 20px;
+            border-radius: 12px;
+        }
+
+        .pf-tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .pf-tab-btn.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .pf-tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: none;
+        }
+
+        .pf-tab-content.active {
+            display: block;
+        }
+
+        /* 地图样式 */
+        .pf-map-container {
+            font-family: 'Arial', sans-serif;
+        }
+
+        .pf-location-item {
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+            line-height: 1.4;
+        }
+
+        .pf-location-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 8px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #667eea;
+        }
+
+        .pf-location-item.main {
+            font-weight: bold;
+            color: #333;
+            margin-top: 12px;
+            padding-left: 0;
+        }
+
+        .pf-location-item.main::before {
+            display: none;
+        }
+
+        .pf-location-item.sub {
+            color: #666;
+            padding-left: 24px;
+        }
+
+        .pf-location-item.subsub {
+            color: #888;
+            padding-left: 40px;
+            font-size: 14px;
+        }
+
+        /* 通讯录样式 */
+        .pf-contact-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .pf-contact-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .pf-contact-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: rgba(102, 126, 234, 0.2);
+            transform: translateX(4px);
+        }
+
+        .pf-contact-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 12px;
+            font-size: 18px;
+        }
+
+        .pf-contact-info {
+            flex: 1;
+        }
+
+        .pf-contact-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .pf-contact-desc {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .pf-contact-stats {
+            font-size: 11px;
+            margin-top: 4px;
+            color: #888;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .pf-stat-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .pf-contact-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pf-action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0, 0, 0, 0.05);
+            color: #667eea;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .pf-action-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        /* 短信样式 */
+        .pf-message-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .pf-message-selector {
+            margin-bottom: 16px;
+        }
+
+        .pf-message-selector select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            background: white;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .pf-message-history {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 12px;
+            min-height: 200px;
+        }
+
+        .pf-message-input {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pf-message-input textarea {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            resize: none;
+            font-size: 14px;
+            min-height: 60px;
+            font-family: inherit;
+        }
+
+        .pf-send-btn {
+            align-self: flex-end;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .pf-send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .pf-message-bubble {
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 12px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .pf-message-sent {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+        }
+
+        .pf-message-received {
+            background: rgba(0, 0, 0, 0.05);
+            color: #333;
+        }
+
+        .pf-message-system {
+            background: rgba(255, 193, 7, 0.1);
+            color: #666;
+            font-style: italic;
+            max-width: 100%;
+            text-align: center;
+        }
+
+        .pf-message-time {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
+
+        /* 通知样式 */
+        .pf-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 10001;
+            animation: pf-slideIn 0.3s ease-out;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .pf-phone-container {
+                width: calc(100vw - 40px);
+                height: 70vh;
+                right: 20px;
+                left: 20px;
+            }
+            
+            .pf-floating-ball {
+                bottom: 80px;
+                right: 20px;
+            }
+        }
+
+        /* 动画效果 */
+        @keyframes pf-slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pf-notificationIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pf-notificationOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        .pf-phone-container.show {
+            display: flex;
+            animation: pf-slideIn 0.3s ease-out;
+        }
+
+        /* 状态指示器 */
+        .pf-status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+
+        .pf-status-online {
+            background: #4caf50;
+        }
+
+        .pf-status-offline {
+            background: #9e9e9e;
+        }
+
+        .pf-status-busy {
+            background: #f44336;
+        }
+    </style>
+</head>
+<body>
+<!-- 悬浮球 -->
+<div class="pf-floating-ball" id="pfFloatingBall" title="打开手机功能">
+    <div class="pf-floating-ball-icon">📱</div>
+</div>
+
+<!-- 手机功能界面 -->
+<div class="pf-phone-container" id="pfPhoneContainer">
+    <div class="pf-phone-header">
+        <div class="pf-phone-title">手机功能</div>
+        <div style="display: flex; gap: 8px;">
+            <button class="pf-phone-sync" id="pfSyncBtn" title="同步联系人">🔄</button>
+            <button class="pf-phone-close" id="pfCloseBtn" title="关闭">×</button>
+        </div>
+    </div>
+    
+    <!-- 选项卡 -->
+    <div class="pf-phone-tabs">
+        <button class="pf-tab-btn active" data-tab="map" title="查看地图">🗺️ 地图</button>
+        <button class="pf-tab-btn" data-tab="contacts" title="查看通讯录">👥 通讯录</button>
+        <button class="pf-tab-btn" data-tab="messages" title="发送短信">💬 短信</button>
+    </div>
+    
+    <!-- 地图选项卡 -->
+    <div class="pf-tab-content active" id="pfTabMap">
+        <div class="pf-map-container">
+            <div class="pf-location-item main">东京整体位置关系</div>
+            <div class="pf-location-item main">西北方向</div>
+            <div class="pf-location-item sub">├─ 杉并区（故事主要舞台）</div>
+            <div class="pf-location-item subsub">│   ├─ 高円寺（主角、伊莉雅、美游、克洛伊、学校）</div>
+            <div class="pf-location-item subsub">│   ├─ 阿佐谷（犬冢夏美）</div>
+            <div class="pf-location-item subsub">│   └─ 荻洼（周边商业区）</div>
+            <div class="pf-location-item sub">├─ 中野区（阿宅君）</div>
+            <div class="pf-location-item sub">├─ 新宿区（繁华商业区，转车枢纽）</div>
+            <div class="pf-location-item sub">├─ 文京区（月咏深雪）</div>
+            <div class="pf-location-item sub">└─ 港区（西园寺爱丽莎）</div>
+            
+            <!-- 交互按钮 -->
+            <div style="margin-top: 24px; display: flex; gap: 12px;">
+                <button class="pf-action-btn" id="pfSearchLocation" title="搜索位置">
+                    <span style="font-size: 20px;">🔍</span>
+                </button>
+                <button class="pf-action-btn" id="pfGetDirections" title="获取路线">
+                    <span style="font-size: 20px;">📍</span>
+                </button>
+                <button class="pf-action-btn" id="pfCurrentLocation" title="当前位置">
+                    <span style="font-size: 20px;">📍</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 通讯录选项卡 -->
+    <div class="pf-tab-content" id="pfTabContacts">
+        <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 14px; color: #666;">
+                共 <span id="pfContactCount">0</span> 个联系人
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="pf-action-btn" id="pfRefreshContacts" title="刷新" style="font-size: 16px;">🔄</button>
+                <button class="pf-action-btn" id="pfAddContact" title="添加联系人" style="font-size: 16px;">➕</button>
+            </div>
+        </div>
+        
+        <div class="pf-contact-list" id="pfContactList">
+            <!-- 通讯录内容将通过JavaScript动态加载 -->
+            <div style="text-align: center; color: #999; padding: 40px 0;">
+                正在加载联系人...
+            </div>
+        </div>
+    </div>
+    
+    <!-- 短信选项卡 -->
+    <div class="pf-tab-content" id="pfTabMessages">
+        <div class="pf-message-container">
+            <div class="pf-message-selector">
+                <select id="pfMessageTo">
+                    <option value="">选择联系人...</option>
+                </select>
+            </div>
+            
+            <div class="pf-message-history" id="pfMessageHistory">
+                <!-- 消息历史将动态显示 -->
+                <div style="text-align: center; color: #999; padding: 40px 0;">
+                    选择联系人开始聊天
+                </div>
+            </div>
+            
+            <div class="pf-message-input">
+                <textarea id="pfMessageInput" placeholder="输入短信内容..."></textarea>
+                <button class="pf-send-btn" id="pfSendMessage">发送</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== 命名空间隔离 - 使用pf命名空间 =====
+class PhoneFunctions {
+    constructor() {
+        this.isOpen = false;
+        this.currentTab = 'map';
+        this.contacts = []; // 动态生成
+        this.messages = {};
+        this.mvuData = null;
+        this.messageListeners = [];
+        this.currentChatContact = null;
+        
+        // 立即初始化
+        this.init().catch(error => {
+            console.error('PhoneFunctions初始化失败:', error);
+            this.showNotification('初始化失败，请刷新页面');
+        });
+    }
+    
+    async init() {
+        // 绑定事件
+        this.bindEvents();
+        
+        // 设置MVU监听器
+        this.setupMvuListener();
+        
+        // 加载MVU数据并生成通讯录
+        await this.loadMvuData();
+        
+        // 加载消息历史
+        this.loadMessageHistory();
+        
+        console.log('手机功能前端初始化完成');
+        this.showNotification('手机功能已加载', 'info');
+    }
+    
+    bindEvents() {
+        // 悬浮球点击
+        document.getElementById('pfFloatingBall').addEventListener('click', (e) => {
+            this.togglePhone();
+            e.stopPropagation();
+        });
+        
+        // 关闭按钮
+        document.getElementById('pfCloseBtn').addEventListener('click', (e) => {
+            this.closePhone();
+            e.stopPropagation();
+        });
+        
+        // 同步按钮
+        document.getElementById('pfSyncBtn').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await this.syncContactsFromMvu();
+        });
+        
+        // 刷新联系人按钮
+        document.getElementById('pfRefreshContacts').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await this.syncContactsFromMvu();
+        });
+        
+        // 添加联系人按钮
+        document.getElementById('pfAddContact').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.promptAddContact();
+        });
+        
+        // 选项卡切换
+        document.querySelectorAll('.pf-tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tab = e.target.dataset.tab;
+                this.switchTab(tab);
+            });
+        });
+        
+        // 地图功能按钮
+        document.getElementById('pfSearchLocation').addEventListener('click', () => {
+            this.sendMessageToAI('搜索当前位置附近的地点');
+        });
+        
+        document.getElementById('pfGetDirections').addEventListener('click', () => {
+            this.sendMessageToAI('获取从当前位置到目的地的路线');
+        });
+        
+        document.getElementById('pfCurrentLocation').addEventListener('click', () => {
+            this.sendMessageToAI('告诉我现在在哪里，周围有什么');
+        });
+        
+        // 发送短信
+        document.getElementById('pfSendMessage').addEventListener('click', () => {
+            this.sendMessage();
+        });
+        
+        // 短信输入框回车发送
+        document.getElementById('pfMessageInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+        
+        // 联系人选择变化
+        document.getElementById('pfMessageTo').addEventListener('change', (e) => {
+            const contactId = e.target.value;
+            if (contactId) {
+                const contact = this.contacts.find(c => c.id === contactId);
+                if (contact) {
+                    this.currentChatContact = contact;
+                    this.loadChatHistory(contactId);
+                }
+            } else {
+                this.currentChatContact = null;
+                this.clearChatHistory();
+            }
+        });
+        
+        // 点击外部关闭
+        document.addEventListener('click', (e) => {
+            const phoneContainer = document.getElementById('pfPhoneContainer');
+            const floatingBall = document.getElementById('pfFloatingBall');
+            
+            if (this.isOpen && 
+                !phoneContainer.contains(e.target) && 
+                !floatingBall.contains(e.target)) {
+                this.closePhone();
+            }
+        });
+    }
+    
+    togglePhone() {
+        const container = document.getElementById('pfPhoneContainer');
+        this.isOpen = !this.isOpen;
+        
+        if (this.isOpen) {
+            container.classList.add('show');
+            // 刷新数据
+            this.updateContactList();
+            this.updateMessageContacts();
+            // 更新联系人数量
+            document.getElementById('pfContactCount').textContent = this.contacts.length;
+        } else {
+            container.classList.remove('show');
+        }
+    }
+    
+    closePhone() {
+        this.isOpen = false;
+        document.getElementById('pfPhoneContainer').classList.remove('show');
+    }
+    
+    switchTab(tab) {
+        this.currentTab = tab;
+        
+        // 更新选项卡按钮状态
+        document.querySelectorAll('.pf-tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tab);
+        });
+        
+        // 更新选项卡内容
+        document.querySelectorAll('.pf-tab-content').forEach(content => {
+            const tabName = content.id.replace('pfTab', '');
+            content.classList.toggle('active', tabName.toLowerCase() === tab);
+        });
+        
+        // 切换时加载对应数据
+        if (tab === 'contacts') {
+            this.updateContactList();
+        } else if (tab === 'messages') {
+            this.updateMessageContacts();
+        }
+    }
+    
+    // ===== MVU变量系统集成 =====
+    async loadMvuData() {
+        try {
+            console.log('开始加载MVU数据...');
+            
+            // 方法1：使用MVU框架API
+            if (typeof window.Mvu !== 'undefined') {
+                console.log('使用MVU框架API');
+                const mvuData = await this.getMvuDataFromFramework();
+                if (mvuData) {
+                    this.mvuData = mvuData;
+                    this.generateContactsFromMvu();
+                    return;
+                }
+            }
+            
+            // 方法2：使用酒馆助手变量API
+            console.log('尝试使用酒馆助手变量API');
+            const variables = await this.getVariablesFromTavernHelper();
+            if (variables) {
+                this.mvuData = { stat_data: variables };
+                this.generateContactsFromMvu();
+                return;
+            }
+            
+            // 方法3：备用方案
+            console.log('使用备用方案加载数据');
+            this.loadFallbackContacts();
+            
+        } catch (error) {
+            console.error('加载MVU数据失败:', error);
+            this.loadFallbackContacts();
+            this.showNotification('无法加载变量数据，使用备用通讯录', 'warning');
+        }
+    }
+    
+    async getMvuDataFromFramework() {
+        try {
+            // 尝试等待MVU框架初始化
+            if (typeof window.TavernHelper !== 'undefined') {
+                await window.TavernHelper.waitGlobalInitialized('Mvu');
+            }
+            
+            // 使用MVU API获取数据
+            if (typeof window.Mvu !== 'undefined' && window.Mvu.getMvuData) {
+                const data = window.Mvu.getMvuData({ type: 'chat' });
+                console.log('从MVU框架获取到数据:', data);
+                return data;
+            }
+            
+            return null;
+        } catch (error) {
+            console.warn('MVU框架获取失败:', error);
+            return null;
+        }
+    }
+    
+    async getVariablesFromTavernHelper() {
+        try {
+            // 使用酒馆助手变量API
+            if (typeof window.TavernHelper !== 'undefined' && window.TavernHelper.getVariables) {
+                const variables = window.TavernHelper.getVariables({ type: 'chat' });
+                console.log('从酒馆助手获取到变量:', variables);
+                return variables;
+            }
+            
+            return null;
+        } catch (error) {
+            console.warn('酒馆助手变量获取失败:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * 核心功能：从MVU变量系统自动生成通讯录
+     * 自动识别stat_data.角色下的所有角色
+     */
+    generateContactsFromMvu() {
+        console.log('开始从MVU生成通讯录...');
+        console.log('MVU数据:', this.mvuData);
+        
+        if (!this.mvuData?.stat_data?.角色) {
+            console.warn('未找到角色数据，使用备用通讯录');
+            this.loadFallbackContacts();
+            return;
+        }
+        
+        const roles = this.mvuData.stat_data.角色;
+        console.log('找到角色:', Object.keys(roles));
+        
+        this.contacts = [];
+        
+        // 遍历所有角色
+        Object.entries(roles).forEach(([roleName, roleData], index) => {
+            // 跳过非对象类型的角色数据
+            if (typeof roleData !== 'object' || roleData === null) {
+                return;
+            }
+            
+            // 生成联系人ID
+            const contactId = this.generateContactId(roleName, index);
+            
+            // 生成联系人信息
+            const contact = {
+                id: contactId,
+                name: roleName,
+                desc: this.generateRoleDescription(roleName, roleData),
+                avatar: this.getAvatarInitial(roleName),
+                phone: this.generatePhoneNumber(index),
+                status: this.generateStatus(roleData),
+                lastContact: this.generateLastContactTime(),
+                mvuData: { ...roleData } // 保存完整的MVU数据
+            };
+            
+            // 确保基础属性存在
+            if (!contact.mvuData.好感度) contact.mvuData.好感度 = 0;
+            if (!contact.mvuData.警戒度) contact.mvuData.警戒度 = 0;
+            if (!contact.mvuData.服从度) contact.mvuData.服从度 = 0;
+            if (!contact.mvuData.性欲) contact.mvuData.性欲 = 0;
+            
+            console.log(`添加联系人: ${roleName} (ID: ${contactId})`);
+            this.contacts.push(contact);
+        });
+        
+        console.log(`从MVU变量系统生成了${this.contacts.length}个联系人`);
+        
+        // 添加系统联系人
+        this.addSystemContacts();
+        
+        // 如果有特殊角色需要额外处理
+        this.addSpecialContacts();
+        
+        // 更新显示
+        this.updateContactList();
+        this.updateMessageContacts();
+        
+        // 显示通知
+        if (this.contacts.length > 0) {
+            this.showNotification(`已加载${this.contacts.length}个联系人`, 'success');
+        }
+    }
+    
+    generateContactId(chineseName, index) {
+        // 中文名到拼音/英文ID的映射
+        const pinyinMap = {
+            '月咏深雪': 'yukino',
+            '西园寺爱丽莎': 'arisa',
+            '犬冢夏美': 'natsumi',
+            '阿宅君': 'otaku',
+            '伊莉雅': 'ilya',
+            '美游': 'miyu',
+            '克洛伊': 'kuro',
+            '卫宫士郎': 'shirou',
+            '远坂凛': 'rin',
+            '间桐樱': 'sakura',
+            '神乐光': 'hikari',
+            '爱城华恋': 'karen',
+            '露崎真昼': 'mahi',
+            '石动双叶': 'futaba'
+        };
+        
+        // 如果在映射表中，使用映射的ID
+        if (pinyinMap[chineseName]) {
+            return pinyinMap[chineseName];
+        }
+        
+        // 否则生成简单ID（移除特殊字符，用下划线连接）
+        return 'contact_' + chineseName
+            .replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '')
+            .toLowerCase();
+    }
+    
+    generateRoleDescription(roleName, roleData) {
+        // 优先使用MVU数据中的描述
+        const customDesc = roleData.描述 || roleData.备注 || roleData.desc || roleData.简介;
+        
+        if (customDesc && customDesc.trim() !== '') {
+            return customDesc;
+        }
+        
+        // 默认描述映射
+        const defaultDescs = {
+            '月咏深雪': '班级委员长，黑发清楚系美少女',
+            '西园寺爱丽莎': '西园寺财团千金，金发巨乳大小姐',
+            '犬冢夏美': '田径部王牌，短发元气假小子',
+            '阿宅君': '爱丽莎的青梅竹马，二次元爱好者',
+            '伊莉雅': '穗群原学园小学生，魔法少女',
+            '美游': '伊莉雅的朋友，同样拥有魔法力量',
+            '克洛伊': '伊莉雅的另一个分身，活泼调皮',
+            '卫宫士郎': '伊莉雅的哥哥，擅长料理和家务',
+            '远坂凛': '魔术师家族的大小姐，优等生',
+            '间桐樱': '温柔体贴的学妹，擅长家务'
+        };
+        
+        return defaultDescs[roleName] || `${roleName} - 角色`;
+    }
+    
+    getAvatarInitial(roleName) {
+        // 取名字的第一个字符（中文名取第一个字）
+        return roleName.charAt(0);
+    }
+    
+    generatePhoneNumber(index) {
+        // 生成固定的伪电话号码
+        const baseNumber = '080-1234-';
+        const suffix = (1000 + index).toString().padStart(4, '0');
+        return baseNumber + suffix;
+    }
+    
+    generateStatus(roleData) {
+        // 根据角色数据生成状态
+        if (roleData.状态 === '在线' || roleData.status === 'online') {
+            return 'online';
+        } else if (roleData.状态 === '忙碌' || roleData.status === 'busy') {
+            return 'busy';
+        } else if (roleData.状态 === '离线' || roleData.status === 'offline') {
+            return 'offline';
+        }
+        
+        // 默认根据好感度判断
+        const favorability = roleData.好感度 || 0;
+        if (favorability > 50) {
+            return 'online';
+        } else if (favorability < 0) {
+            return 'busy';
+        } else {
+            return 'offline';
+        }
+    }
+    
+    generateLastContactTime() {
+        // 随机生成最后联系时间
+        const hoursAgo = Math.floor(Math.random() * 72); // 0-72小时前
+        if (hoursAgo < 1) {
+            return '刚刚';
+        } else if (hoursAgo < 24) {
+            return `${hoursAgo}小时前`;
+        } else {
+            return `${Math.floor(hoursAgo / 24)}天前`;
+        }
+    }
+    
+    addSystemContacts() {
+        const systemContacts = [
+            {
+                id: 'system_info',
+                name: '系统信息',
+                desc: '查看系统状态和帮助',
+                avatar: '⚙️',
+                phone: '080-0000-0000',
+                status: 'online',
+                lastContact: '刚刚',
+                mvuData: { 类型: '系统', 好感度: 100, 警戒度: 0 }
+            },
+            {
+                id: 'emergency',
+                name: '紧急联系人',
+                desc: '警察/救护车/消防',
+                avatar: '🚨',
+                phone: '110/119',
+                status: 'online',
+                lastContact: '从未',
+                mvuData: { 类型: '紧急', 好感度: 100, 警戒度: 0 }
+            },
+            {
+                id: 'weather',
+                name: '天气服务',
+                desc: '天气预报和警报',
+                avatar: '🌤️',
+                phone: '177',
+                status: 'online',
+                lastContact: '1小时前',
+                mvuData: { 类型: '服务', 好感度: 100, 警戒度: 0 }
+            }
+        ];
+        
+        this.contacts.push(...systemContacts);
+    }
+    
+    addSpecialContacts() {
+        // 这里可以添加任何特殊逻辑
+        // 例如：检查是否有特定的世界书条目，然后添加对应的联系人
+    }
+    
+    setupMvuListener() {
+        console.log('设置MVU监听器...');
+        
+        // 监听MVU变量更新事件
+        if (typeof window.eventOn !== 'undefined') {
+            try {
+                // 监听MVU变量更新结束事件
+                window.eventOn('mag_variable_update_ended', (newVariables) => {
+                    console.log('检测到MVU变量更新');
+                    this.mvuData = newVariables;
+                    this.generateContactsFromMvu();
+                });
+                
+                // 监听酒馆聊天变化事件
+                window.eventOn('chat_id_changed', () => {
+                    console.log('聊天文件变更，重新加载数据');
+                    setTimeout(() => {
+                        this.loadMvuData();
+                    }, 1000);
+                });
+                
+                console.log('MVU事件监听器已设置');
+            } catch (error) {
+                console.warn('设置MVU事件监听器失败:', error);
+            }
+        } else {
+            console.warn('eventOn函数不可用，无法设置MVU监听器');
+            
+            // 备用方案：轮询检查变量变化
+            this.setupPollingListener();
+        }
+    }
+    
+    setupPollingListener() {
+        console.log('设置轮询监听器...');
+        let lastRoleCount = 0;
+        
+        // 每30秒检查一次角色数量变化
+        setInterval(() => {
+            if (this.mvuData?.stat_data?.角色) {
+                const currentRoleCount = Object.keys(this.mvuData.stat_data.角色).length;
+                if (currentRoleCount !== lastRoleCount) {
+                    console.log(`角色数量变化: ${lastRoleCount} -> ${currentRoleCount}`);
+                    lastRoleCount = currentRoleCount;
+                    this.generateContactsFromMvu();
+                }
+            }
+        }, 30000); // 30秒
+    }
+    
+    async syncContactsFromMvu() {
+        try {
+            this.showNotification('正在同步联系人...', 'info');
+            await this.loadMvuData();
+            this.showNotification(`同步完成，共${this.contacts.length}个联系人`, 'success');
+        } catch (error) {
+            console.error('同步失败:', error);
+            this.showNotification('同步失败，请检查控制台', 'error');
+        }
+    }
+    
+    promptAddContact() {
+        // 简化版添加联系人弹窗
+        const name = prompt('输入联系人姓名:');
+        if (!name) return;
+        
+        const desc = prompt('输入联系人描述:') || '新的联系人';
+        
+        const newContact = {
+            id: 'custom_' + Date.now(),
+            name: name,
+            desc: desc,
+            avatar: name.charAt(0),
+            phone: '080-' + Math.floor(Math.random() * 10000).toString().padStart(4, '0') + '-' + Math.floor(Math.random() * 10000).toString().padStart(4, '0'),
+            status: 'offline',
+            lastContact: '从未',
+            mvuData: { 好感度: 0, 警戒度: 0, 服从度: 0, 性欲: 0, 类型: '自定义' }
+        };
+        
+        this.contacts.push(newContact);
+        this.updateContactList();
+        this.updateMessageContacts();
+        
+        this.showNotification(`已添加联系人: ${name}`, 'success');
+    }
+    
+    // ===== 通讯录显示 =====
+    updateContactList() {
+        const container = document.getElementById('pfContactList');
+        const countElement = document.getElementById('pfContactCount');
+        
+        if (!container) return;
+        
+        // 更新数量
+        if (countElement) {
+            countElement.textContent = this.contacts.length;
+        }
+        
+        // 如果没有联系人
+        if (this.contacts.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; color: #999; padding: 60px 0;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">📇</div>
+                    <div style="margin-bottom: 12px;">没有找到联系人</div>
+                    <div style="font-size: 12px; margin-bottom: 20px;">请确保MVU变量系统已初始化</div>
+                    <button id="pfRetryLoad" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                        重试加载
+                    </button>
+                </div>
+            `;
+            
+            // 绑定重试按钮
+            const retryBtn = document.getElementById('pfRetryLoad');
+            if (retryBtn) {
+                retryBtn.addEventListener('click', async () => {
+                    await this.loadMvuData();
+                });
+            }
+            
+            return;
+        }
+        
+        // 清空容器
+        container.innerHTML = '';
+        
+        // 按首字母排序
+        const sortedContacts = [...this.contacts].sort((a, b) => {
+            return a.name.localeCompare(b.name, 'zh-CN');
+        });
+        
+        // 按首字母分组
+        const groupedContacts = {};
+        sortedContacts.forEach(contact => {
+            const firstChar = contact.name.charAt(0).toUpperCase();
+            if (!groupedContacts[firstChar]) {
+                groupedContacts[firstChar] = [];
+            }
+            groupedContacts[firstChar].push(contact);
+        });
+        
+        // 渲染分组
+        Object.keys(groupedContacts).sort().forEach(letter => {
+            // 字母标题
+            const letterHeader = document.createElement('div');
+            letterHeader.style.cssText = `
+                padding: 8px 0;
+                margin-top: 16px;
+                font-weight: bold;
+                color: #667eea;
+                border-bottom: 1px solid rgba(0,0,0,0.1);
+                font-size: 14px;
+            `;
+            letterHeader.textContent = letter;
+            container.appendChild(letterHeader);
+            
+            // 该字母下的联系人
+            groupedContacts[letter].forEach(contact => {
+                const contactElement = this.createContactElement(contact);
+                container.appendChild(contactElement);
+            });
+        });
+    }
+    
+    createContactElement(contact) {
+        const element = document.createElement('div');
+        element.className = 'pf-contact-item';
+        element.dataset.id = contact.id;
+        
+        // 状态指示器
+        const statusClass = {
+            'online': 'pf-status-online',
+            'offline': 'pf-status-offline',
+            'busy': 'pf-status-busy'
+        }[contact.status] || 'pf-status-offline';
+        
+        // 统计数据
+        const statsHtml = contact.mvuData ? `
+            <div class="pf-contact-stats">
+                <span class="pf-stat-item" title="好感度">♥${contact.mvuData.好感度 || 0}</span>
+                <span class="pf-stat-item" title="警戒度">⚠${contact.mvuData.警戒度 || 0}</span>
+                <span class="pf-stat-item" title="服从度">📋${contact.mvuData.服从度 || 0}</span>
+                <span class="pf-stat-item" title="性欲">🔥${contact.mvuData.性欲 || 0}</span>
+            </div>
+        ` : '';
+        
+        element.innerHTML = `
+            <div class="pf-contact-avatar">${contact.avatar}</div>
+            <div class="pf-contact-info">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <span class="pf-contact-name">${contact.name}</span>
+                    <span class="pf-status-indicator ${statusClass}" title="${contact.status === 'online' ? '在线' : contact.status === 'busy' ? '忙碌' : '离线'}"></span>
+                </div>
+                <div class="pf-contact-desc">${contact.desc}</div>
+                <div style="font-size: 11px; color: #888; margin-top: 2px;">
+                    <span title="电话号码">📞 ${contact.phone}</span>
+                    <span style="margin-left: 12px;" title="最后联系">🕐 ${contact.lastContact}</span>
+                </div>
+                ${statsHtml}
+            </div>
+            <div class="pf-contact-actions">
+                <button class="pf-action-btn pf-call-btn" title="打电话">
+                    📞
+                </button>
+                <button class="pf-action-btn pf-message-btn" title="发短信">
+                    💬
+                </button>
+            </div>
+        `;
+        
+        // 绑定事件
+        element.addEventListener('click', (e) => {
+            if (!e.target.closest('.pf-contact-actions')) {
+                this.showContactDetail(contact);
+            }
+        });
+        
+        element.querySelector('.pf-call-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.makeCall(contact);
+        });
+        
+        element.querySelector('.pf-message-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openMessageTo(contact);
+        });
+        
+        return element;
+    }
+    
+    showContactDetail(contact) {
+        // 显示联系人详情
+        const detailHtml = `
+            <div style="padding: 20px;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 32px; font-weight: bold; margin-bottom: 16px;">
+                        ${contact.avatar}
+                    </div>
+                    <div style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">${contact.name}</div>
+                    <div style="color: #666; margin-bottom: 16px;">${contact.desc}</div>
+                </div>
+                
+                <div style="background: rgba(0,0,0,0.03); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #666;">电话</span>
+                        <span style="font-weight: 500;">${contact.phone}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #666;">状态</span>
+                        <span style="font-weight: 500; color: ${contact.status === 'online' ? '#4caf50' : contact.status === 'busy' ? '#f44336' : '#9e9e9e'}">
+                            ${contact.status === 'online' ? '在线' : contact.status === 'busy' ? '忙碌' : '离线'}
+                        </span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #666;">最后联系</span>
+                        <span style="font-weight: 500;">${contact.lastContact}</span>
+                    </div>
+                </div>
+                
+                ${contact.mvuData ? `
+                <div style="background: rgba(0,0,0,0.03); border-radius: 12px; padding: 16px;">
+                    <div style="font-weight: 600; margin-bottom: 12px; color: #667eea;">角色数据</div>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                        <div style="background: white; padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">好感度</div>
+                            <div style="font-size: 20px; font-weight: bold; color: #e91e63;">♥${contact.mvuData.好感度 || 0}</div>
+                        </div>
+                        <div style="background: white; padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">警戒度</div>
+                            <div style="font-size: 20px; font-weight: bold; color: #ff9800;">⚠${contact.mvuData.警戒度 || 0}</div>
+                        </div>
+                        <div style="background: white; padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">服从度</div>
+                            <div style="font-size: 20px; font-weight: bold; color: #2196f3;">📋${contact.mvuData.服从度 || 0}</div>
+                        </div>
+                        <div style="background: white; padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">性欲</div>
+                            <div style="font-size: 20px; font-weight: bold; color: #f44336;">🔥${contact.mvuData.性欲 || 0}</div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button id="pfDetailCall" style="flex: 1; padding: 12px; background: #4caf50; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                        📞 打电话
+                    </button>
+                    <button id="pfDetailMessage" style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                        💬 发短信
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // 创建弹窗
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10002;
+            animation: pf-slideIn 0.3s ease-out;
+        `;
+        
+        modal.innerHTML = `
+            <div style="background: white; width: 90%; max-width: 400px; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                <div style="position: relative;">
+                    ${detailHtml}
+                    <button id="pfCloseDetail" style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.2); border: none; width: 32px; height: 32px; border-radius: 50%; color: white; cursor: pointer; font-size: 20px;">×</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // 绑定事件
+        document.getElementById('pfCloseDetail').addEventListener('click', () => {
+            modal.remove();
+        });
+        
+        document.getElementById('pfDetailCall').addEventListener('click', () => {
+            this.makeCall(contact);
+            modal.remove();
+        });
+        
+        document.getElementById('pfDetailMessage').addEventListener('click', () => {
+            this.openMessageTo(contact);
+            modal.remove();
+        });
+        
+        // 点击外部关闭
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+    
+    updateMessageContacts() {
+        const select = document.getElementById('pfMessageTo');
+        if (!select) return;
+        
+        // 保存当前选择
+        const currentValue = select.value;
+        
+        // 清空选项（保留第一个）
+        select.innerHTML = '<option value="">选择联系人...</option>';
+        
+        // 按字母排序联系人
+        const sortedContacts = [...this.contacts].sort((a, b) => {
+            return a.name.localeCompare(b.name, 'zh-CN');
+        });
+        
+        // 添加联系人选项
+        sortedContacts.forEach(contact => {
+            const option = document.createElement('option');
+            option.value = contact.id;
+            option.textContent = `${contact.name} (${contact.desc.substring(0, 20)}...)`;
+            select.appendChild(option);
+        });
+        
+        // 恢复之前的选择
+        if (currentValue && this.contacts.some(c => c.id === currentValue)) {
+            select.value = currentValue;
+        }
+    }
+    
+    // ===== 短信功能 =====
+    makeCall(contact) {
+        if (!contact) return;
+        
+        // 发送打电话的消息到AI
+        const message = `【打电话】给${contact.name}打电话，电话号码是${contact.phone}`;
+        this.sendMessageToAI(message);
+        
+        // 显示呼叫界面
+        this.showCallInterface(contact);
+        
+        // 切换到短信界面
+        this.switchTab('messages');
+        
+        // 自动切换到该联系人
+        document.getElementById('pfMessageTo').value = contact.id;
+        this.currentChatContact = contact;
+        this.loadChatHistory(contact.id);
+    }
+    
+    showCallInterface(contact) {
+        // 添加到消息历史
+        this.addMessageToHistory(contact.id, {
+            type: 'system',
+            text: `正在呼叫 ${contact.name}...`,
+            time: new Date().toLocaleTimeString()
+        });
+    }
+    
+    openMessageTo(contact) {
+        this.switchTab('messages');
+        document.getElementById('pfMessageTo').value = contact.id;
+        this.currentChatContact = contact;
+        this.loadChatHistory(contact.id);
+        document.getElementById('pfMessageInput').focus();
+    }
+    
+    sendMessage() {
+        const contactId = document.getElementById('pfMessageTo').value;
+        const messageText = document.getElementById('pfMessageInput').value.trim();
+        
+        if (!contactId) {
+            this.showNotification('请先选择联系人', 'warning');
+            return;
+        }
+        
+        if (!messageText) {
+            this.showNotification('请输入消息内容', 'warning');
+            return;
+        }
+        
+        const contact = this.contacts.find(c => c.id === contactId);
+        if (!contact) {
+            this.showNotification('联系人不存在', 'error');
+            return;
+        }
+        
+        // 添加到消息历史
+        this.addMessageToHistory(contactId, {
+            type: 'sent',
+            text: messageText,
+            contact: contact.name,
+            time: new Date().toLocaleTimeString()
+        });
+        
+        // 发送到AI
+        const aiMessage = `【发短信】给${contact.name}发送短信：${messageText}`;
+        this.sendMessageToAI(aiMessage);
+        
+        // 清空输入框
+        document.getElementById('pfMessageInput').value = '';
+        
+        // 滚动到底部
+        const history = document.getElementById('pfMessageHistory');
+        history.scrollTop = history.scrollHeight;
+        
+        // 保存到本地存储
+        this.saveMessageHistory();
+    }
+    
+    addMessageToHistory(contactId, message) {
+        const history = document.getElementById('pfMessageHistory');
+        
+        // 初始化消息历史
+        if (!this.messages[contactId]) {
+            this.messages[contactId] = [];
+        }
+        
+        // 添加到内存
+        this.messages[contactId].push({
+            ...message,
+            timestamp: Date.now()
+        });
+        
+        // 限制历史记录长度
+        if (this.messages[contactId].length > 100) {
+            this.messages[contactId] = this.messages[contactId].slice(-100);
+        }
+        
+        // 渲染消息
+        this.renderChatHistory(contactId);
+    }
+    
+    loadChatHistory(contactId) {
+        if (!this.messages[contactId]) {
+            this.messages[contactId] = [];
+        }
+        this.renderChatHistory(contactId);
+    }
+    
+    renderChatHistory(contactId) {
+        const history = document.getElementById('pfMessageHistory');
+        const messages = this.messages[contactId] || [];
+        
+        // 清空历史
+        history.innerHTML = '';
+        
+        if (messages.length === 0) {
+            history.innerHTML = `
+                <div style="text-align: center; color: #999; padding: 40px 0;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
+                    <div>还没有和${this.currentChatContact?.name || '对方'}的聊天记录</div>
+                    <div style="font-size: 12px; margin-top: 8px;">发送第一条消息开始对话</div>
+                </div>
+            `;
+            return;
+        }
+        
+        // 渲染每条消息
+        messages.forEach(msg => {
+            const messageElement = document.createElement('div');
+            
+            let bubbleClass = 'pf-message-bubble ';
+            if (msg.type === 'sent') {
+                bubbleClass += 'pf-message-sent';
+            } else if (msg.type === 'system') {
+                bubbleClass += 'pf-message-system';
+            } else {
+                bubbleClass += 'pf-message-received';
+            }
+            
+            messageElement.className = bubbleClass;
+            messageElement.innerHTML = `
+                <div class="pf-message-time">${msg.time}</div>
+                <div>${msg.text}</div>
+            `;
+            
+            history.appendChild(messageElement);
+        });
+        
+        // 滚动到底部
+        setTimeout(() => {
+            history.scrollTop = history.scrollHeight;
+        }, 100);
+    }
+    
+    clearChatHistory() {
+        const history = document.getElementById('pfMessageHistory');
+        history.innerHTML = `
+            <div style="text-align: center; color: #999; padding: 40px 0;">
+                选择联系人开始聊天
+            </div>
+        `;
+    }
+    
+    loadMessageHistory() {
+        try {
+            const saved = localStorage.getItem('pf-messages-v2');
+            if (saved) {
+                this.messages = JSON.parse(saved);
+                console.log('加载消息历史:', Object.keys(this.messages).length, '个联系人的记录');
+            }
+        } catch (e) {
+            console.warn('无法加载消息历史:', e);
+            this.messages = {};
+        }
+    }
+    
+    saveMessageHistory() {
+        try {
+            localStorage.setItem('pf-messages-v2', JSON.stringify(this.messages));
+        } catch (e) {
+            console.warn('无法保存消息历史:', e);
+        }
+    }
+    
+    // ===== AI通信 =====
+    sendMessageToAI(message) {
+        console.log('发送消息到AI:', message);
+        
+        try {
+            // 方法1: 使用酒馆助手的triggerSlash
+            if (typeof window.TavernHelper !== 'undefined' && window.TavernHelper.triggerSlash) {
+                window.TavernHelper.triggerSlash(`/say ${message}`);
+                return;
+            }
+            
+            // 方法2: 使用酒馆助手的createChatMessages
+            if (typeof window.TavernHelper !== 'undefined' && window.TavernHelper.createChatMessages) {
+                window.TavernHelper.createChatMessages([{
+                    role: 'user',
+                    message: message
+                }]);
+                return;
+            }
+            
+            // 方法3: 发送自定义事件
+            const event = new CustomEvent('send-user-message', {
+                detail: { text: message }
+            });
+            window.dispatchEvent(event);
+            
+            // 方法4: 通过postMessage到父窗口
+            if (window.parent) {
+                window.parent.postMessage({
+                    type: 'user-message',
+                    text: message
+                }, '*');
+            }
+            
+            // 添加到系统消息作为备用
+            if (this.currentChatContact) {
+                this.addMessageToHistory(this.currentChatContact.id, {
+                    type: 'system',
+                    text: `[已发送到AI]: ${message}`,
+                    time: new Date().toLocaleTimeString()
+                });
+            }
+            
+        } catch (error) {
+            console.error('发送消息失败:', error);
+            this.showNotification('发送失败，请检查控制台', 'error');
+        }
+    }
+    
+    // ===== 工具函数 =====
+    showNotification(message, type = 'info') {
+        const colors = {
+            'info': '#667eea',
+            'success': '#4caf50',
+            'warning': '#ff9800',
+            'error': '#f44336'
+        };
+        
+        const icon = {
+            'info': 'ℹ️',
+            'success': '✅',
+            'warning': '⚠️',
+            'error': '❌'
+        }[type] || 'ℹ️';
+        
+        // 移除已有的通知
+        const existing = document.querySelectorAll('.pf-notification');
+        existing.forEach(el => el.remove());
+        
+        // 创建新通知
+        const notification = document.createElement('div');
+        notification.className = 'pf-notification';
+        notification.style.background = colors[type] || colors.info;
+        
+        notification.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="font-size: 16px;">${icon}</div>
+                <div>
+                    <div style="font-weight: 600; font-size: 14px;">手机功能</div>
+                    <div style="font-size: 12px; opacity: 0.9;">${message}</div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // 3秒后自动消失
+        setTimeout(() => {
+            notification.style.animation = 'pf-notificationOut 0.3s ease-out';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+    
+    loadFallbackContacts() {
+        console.log('使用备用通讯录数据');
+        this.contacts = [
+            {
+                id: 'yukino',
+                name: '月咏深雪',
+                desc: '班级委员长，黑发清楚系美少女',
+                avatar: '雪',
+                phone: '080-1111-2222',
+                status: 'online',
+                lastContact: '2小时前',
+                mvuData: { 好感度: 50, 警戒度: 10, 服从度: 30, 性欲: 5, 描述: '班级委员长，黑发清楚系美少女' }
+            },
+            {
+                id: 'arisa',
+                name: '西园寺爱丽莎',
+                desc: '西园寺财团千金，金发巨乳大小姐',
+                avatar: '爱',
+                phone: '080-2222-3333',
+                status: 'online',
+                lastContact: '1天前',
+                mvuData: { 好感度: 70, 警戒度: 20, 服从度: 10, 性欲: 15, 描述: '西园寺财团千金，金发巨乳大小姐' }
+            },
+            {
+                id: 'natsumi',
+                name: '犬冢夏美',
+                desc: '田径部王牌，短发元气假小子',
+                avatar: '夏',
+                phone: '080-3333-4444',
+                status: 'offline',
+                lastContact: '刚刚',
+                mvuData: { 好感度: 80, 警戒度: 5, 服从度: 40, 性欲: 10, 描述: '田径部王牌，短发元气假小子' }
+            },
+            {
+                id: 'otaku',
+                name: '阿宅君',
+                desc: '爱丽莎的青梅竹马，二次元爱好者',
+                avatar: '宅',
+                phone: '080-4444-5555',
+                status: 'busy',
+                lastContact: '3天前',
+                mvuData: { 好感度: 40, 警戒度: 30, 服从度: 20, 性欲: 25, 描述: '爱丽莎的青梅竹马，二次元爱好者' }
+            },
+            {
+                id: 'ilya',
+                name: '伊莉雅',
+                desc: '穗群原学园小学生，魔法少女',
+                avatar: '伊',
+                phone: '080-5555-6666',
+                status: 'online',
+                lastContact: '5小时前',
+                mvuData: { 好感度: 90, 警戒度: 0, 服从度: 60, 性欲: 0, 描述: '穗群原学园小学生，魔法少女' }
+            }
+        ];
+        
+        this.addSystemContacts();
+        this.updateContactList();
+        this.updateMessageContacts();
+    }
+}
+
+// ===== 全局初始化 =====
+// 等待DOM加载完成
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializePhoneFunctions);
+} else {
+    initializePhoneFunctions();
+}
+
+function initializePhoneFunctions() {
+    try {
+        // 确保不会重复初始化
+        if (!window.pfInstance) {
+            window.pfInstance = new PhoneFunctions();
+            console.log('手机功能前端已初始化');
+            
+            // 全局导出（如果需要）
+            window.PhoneFunctions = PhoneFunctions;
+        }
+    } catch (error) {
+        console.error('手机功能前端初始化失败:', error);
+        
+        // 显示错误信息
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #f44336;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10003;
+            max-width: 300px;
+            font-size: 12px;
+        `;
+        errorDiv.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 4px;">手机功能加载失败</div>
+            <div>${error.message}</div>
+        `;
+        document.body.appendChild(errorDiv);
+        
+        // 10秒后移除错误信息
+        setTimeout(() => errorDiv.remove(), 10000);
+    }
+}
+
+// 添加动画样式
+if (!document.querySelector('#pf-animation-styles')) {
+    const style = document.createElement('style');
+    style.id = 'pf-animation-styles';
+    style.textContent = `
+        @keyframes pf-slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pf-notificationIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes pf-notificationOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+</script>
+</body>
+</html>
